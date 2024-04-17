@@ -11,13 +11,13 @@ const (
 
 type errorList = []map[string]any
 
-type JSONEncoder interface {
+type jsonEncoder interface {
 	Encode(data map[string]any) ([]byte, error)
 }
 
 type JSONResponseWriter struct {
 	logger  *log.Logger
-	encoder JSONEncoder
+	encoder jsonEncoder
 }
 
 func (writer *JSONResponseWriter) Write(w http.ResponseWriter, r *http.Request, status int, message map[string]any) {
@@ -52,7 +52,7 @@ func (writer *JSONResponseWriter) WriteNotFound(w http.ResponseWriter, r *http.R
 	writer.WriteError(w, r, http.StatusNotFound, errors)
 }
 
-func NewJSONWriter(logger *log.Logger, encoder JSONEncoder) *JSONResponseWriter {
+func NewJSONWriter(logger *log.Logger, encoder jsonEncoder) *JSONResponseWriter {
 	return &JSONResponseWriter{logger: logger, encoder: encoder}
 }
 
