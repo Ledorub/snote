@@ -11,8 +11,9 @@ type JSONEncDec interface {
 }
 
 type ResponseWriter interface {
-	Write(w http.ResponseWriter, r *http.Request, status int, message map[string]any)
+	Write(w http.ResponseWriter, r *http.Request, status int, message any)
 	WriteError(w http.ResponseWriter, r *http.Request, status int, errors []map[string]any)
 	WriteServerError(w http.ResponseWriter, r *http.Request, err error)
 	WriteNotFound(w http.ResponseWriter, r *http.Request)
+	WriteBadRequest(w http.ResponseWriter, r *http.Request, err error)
 }
