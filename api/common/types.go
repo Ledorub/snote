@@ -10,6 +10,10 @@ type JSONEncDec interface {
 	Decode(data io.Reader, dst any) error
 }
 
+type RequestReader interface {
+	Read(body io.Reader, dst any) error
+}
+
 type ResponseWriter interface {
 	Write(w http.ResponseWriter, r *http.Request, status int, message any)
 	WriteError(w http.ResponseWriter, r *http.Request, status int, errors []map[string]any)
