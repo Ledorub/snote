@@ -52,6 +52,13 @@ func (writer *JSONResponseWriter) WriteNotFound(w http.ResponseWriter, r *http.R
 	writer.WriteError(w, r, http.StatusNotFound, errors)
 }
 
+func (writer *JSONResponseWriter) WriteBadRequest(w http.ResponseWriter, r *http.Request, err error) {
+	errors := errorList{
+		{"message": err.Error()},
+	}
+	writer.WriteError(w, r, http.StatusBadRequest, errors)
+}
+
 func NewJSONWriter(logger *log.Logger, encoder jsonEncoder) *JSONResponseWriter {
 	return &JSONResponseWriter{logger: logger, encoder: encoder}
 }
