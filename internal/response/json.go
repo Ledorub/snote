@@ -12,7 +12,7 @@ const (
 type errorList = []map[string]any
 
 type jsonEncoder interface {
-	Encode(data map[string]any) ([]byte, error)
+	Encode(data any) ([]byte, error)
 }
 
 type JSONResponseWriter struct {
@@ -20,7 +20,7 @@ type JSONResponseWriter struct {
 	encoder jsonEncoder
 }
 
-func (writer *JSONResponseWriter) Write(w http.ResponseWriter, r *http.Request, status int, message map[string]any) {
+func (writer *JSONResponseWriter) Write(w http.ResponseWriter, r *http.Request, status int, message any) {
 	encoded, err := writer.encoder.Encode(message)
 	if err != nil {
 		writer.logger.Print(err)
