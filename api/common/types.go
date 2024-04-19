@@ -15,9 +15,9 @@ type RequestReader interface {
 }
 
 type ResponseWriter interface {
-	Write(w http.ResponseWriter, r *http.Request, status int, message any)
-	WriteError(w http.ResponseWriter, r *http.Request, status int, errors []map[string]any)
-	WriteServerError(w http.ResponseWriter, r *http.Request, err error)
-	WriteNotFound(w http.ResponseWriter, r *http.Request)
-	WriteBadRequest(w http.ResponseWriter, r *http.Request, err error)
+	Write(http.ResponseWriter, *http.Request, int, any)
+	WriteError(http.ResponseWriter, *http.Request, int, []map[string]any)
+	WriteServerError(http.ResponseWriter, *http.Request, error)
+	WriteNotFound(http.ResponseWriter, *http.Request)
+	WriteBadRequest(http.ResponseWriter, *http.Request, error)
 }
