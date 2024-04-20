@@ -8,13 +8,19 @@ import (
 )
 
 type API struct {
-	logger         *log.Logger
-	requestReader  common.RequestReader
-	responseWriter common.ResponseWriter
+	logger           *log.Logger
+	requestReader    common.RequestReader
+	responseWriter   common.ResponseWriter
+	validatorFactory common.ValidatorFactory
 }
 
-func New(logger *log.Logger, requestReader common.RequestReader, responseWriter common.ResponseWriter) *API {
-	return &API{logger: logger, requestReader: requestReader, responseWriter: responseWriter}
+func New(logger *log.Logger, requestReader common.RequestReader, responseWriter common.ResponseWriter, validatorFactory common.ValidatorFactory) *API {
+	return &API{
+		logger:           logger,
+		requestReader:    requestReader,
+		responseWriter:   responseWriter,
+		validatorFactory: validatorFactory,
+	}
 }
 
 func (api *API) Create(w http.ResponseWriter, r *http.Request) {
