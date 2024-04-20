@@ -20,4 +20,5 @@ type ResponseWriter interface {
 	WriteServerError(http.ResponseWriter, *http.Request, error)
 	WriteNotFound(http.ResponseWriter, *http.Request)
 	WriteBadRequest(http.ResponseWriter, *http.Request, error)
+	WriteValidationError(http.ResponseWriter, *http.Request, ValidationErrors)
 }
