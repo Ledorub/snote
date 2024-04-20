@@ -31,6 +31,20 @@ func (v *Validator) CheckField(field string, ok bool, message string) {
 	}
 }
 
+func (v *Validator) GetNonFieldErrors() []string {
+	return v.NonFieldErrors
+}
+
+func (v *Validator) GetFieldErrors() map[string]string {
+	return v.FieldErrors
+}
+
+func New() *Validator {
+	return &Validator{
+		FieldErrors: make(map[string]string),
+	}
+}
+
 func ValidateValueInRange[T cmp.Ordered](v, low, high T) bool {
 	return v >= low && v <= high
 }
