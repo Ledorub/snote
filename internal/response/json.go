@@ -9,12 +9,6 @@ const (
 	contentTypeJSON string = "application/json"
 )
 
-type errorList = []map[string]any
-
-type jsonEncoder interface {
-	Encode(data any) ([]byte, error)
-}
-
 type JSONResponseWriter struct {
 	logger  *log.Logger
 	encoder jsonEncoder
@@ -59,9 +53,26 @@ func (writer *JSONResponseWriter) WriteBadRequest(w http.ResponseWriter, r *http
 	writer.WriteError(w, r, http.StatusBadRequest, errors)
 }
 
+func (writer *JSONResponseWriter) WriteValidationError(w http.ResponseWriter, r *http.Request, errs []map[string]string) {
+	errors := make(errorList, len(errs))
+	for i, err := range errs {
+		errors[i] = make(map[string]any, len(err))
+		for k, v := range err {
+			errors[i][k] = v
+		}
+	}
+	writer.WriteError(w, r, http.StatusUnprocessableEntity, errors)
+}
+
 func NewJSONWriter(logger *log.Logger, encoder jsonEncoder) *JSONResponseWriter {
 	return &JSONResponseWriter{logger: logger, encoder: encoder}
 }
+
+type jsonEncoder interface {
+	Encode(data any) ([]byte, error)
+}
+
+type errorList = []map[string]any
 
 func errorListToMsg(errors errorList) map[string]any {
 	return map[string]any{
