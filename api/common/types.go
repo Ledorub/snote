@@ -22,3 +22,16 @@ type ResponseWriter interface {
 	WriteBadRequest(http.ResponseWriter, *http.Request, error)
 	WriteValidationError(http.ResponseWriter, *http.Request, ValidationErrors)
 }
+
+type Validator interface {
+	CheckIsValid() bool
+	AddNonFieldError(string)
+	AddFieldError(string, string)
+	CheckField(string, bool, string)
+	GetNonFieldErrors() []string
+	GetFieldErrors() map[string]string
+}
+
+type ValidatorFactory = func() Validator
+
+type ValidationErrors = []map[string]string
