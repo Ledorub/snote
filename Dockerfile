@@ -17,7 +17,8 @@ WORKDIR /usr/local/bin
 
 COPY --from=build-stage /usr/local/bin/snote ./snote
 
+USER app:app
 EXPOSE 8080
 
-USER app:app
-ENTRYPOINT ["./snote", "--port", "8080"]
+ENTRYPOINT ["./snote"]
+CMD ["--port 8080"]
