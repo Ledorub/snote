@@ -1,6 +1,6 @@
 CREATE TABLE note (
     id BIGINT GENERATED ALWAYS AS IDENTITY,
-    content TEXT NOT NULL,
+    content VARCHAR(1048576) NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL,
     expires_at TIMESTAMP NOT NULL,
     expires_at_timezone TEXT NOT NULL,
