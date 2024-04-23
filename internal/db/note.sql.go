@@ -13,10 +13,10 @@ import (
 
 const createNote = `-- name: CreateNote :one
 INSERT INTO note (
-    content, created_at, expires_at, expires_at_timezone
+    content, created_at, expires_at, expires_at_timezone, key_hash
 ) VALUES (
-    $1, $2, $3, $4
-) RETURNING id, content, created_at, expires_at, expires_at_timezone
+    $1, $2, $3, $4, $5
+) RETURNING id, content, created_at, expires_at, expires_at_timezone, key_hash
 `
 
 type CreateNoteParams struct {
@@ -24,6 +24,7 @@ type CreateNoteParams struct {
 	CreatedAt         pgtype.Timestamptz
 	ExpiresAt         pgtype.Timestamp
 	ExpiresAtTimezone string
+	KeyHash           []byte
 }
 
 func (q *Queries) CreateNote(ctx context.Context, arg CreateNoteParams) (Note, error) {
@@ -32,6 +33,7 @@ func (q *Queries) CreateNote(ctx context.Context, arg CreateNoteParams) (Note, e
 		arg.CreatedAt,
 		arg.ExpiresAt,
 		arg.ExpiresAtTimezone,
+		arg.KeyHash,
 	)
 	var i Note
 	err := row.Scan(
@@ -40,6 +42,7 @@ func (q *Queries) CreateNote(ctx context.Context, arg CreateNoteParams) (Note, e
 		&i.CreatedAt,
 		&i.ExpiresAt,
 		&i.ExpiresAtTimezone,
+		&i.KeyHash,
 	)
 	return i, err
 }
@@ -55,7 +58,7 @@ func (q *Queries) DeleteNote(ctx context.Context, id pgtype.Int8) error {
 }
 
 const getNote = `-- name: GetNote :one
-SELECT id, content, created_at, expires_at, expires_at_timezone
+SELECT id, content, created_at, expires_at, expires_at_timezone, key_hash
 FROM note
 WHERE id = $1
 `
@@ -69,6 +72,7 @@ func (q *Queries) GetNote(ctx context.Context, id pgtype.Int8) (Note, error) {
 		&i.CreatedAt,
 		&i.ExpiresAt,
 		&i.ExpiresAtTimezone,
+		&i.KeyHash,
 	)
 	return i, err
 }

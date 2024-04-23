@@ -14,4 +14,5 @@ type Note struct {
 	CreatedAt         pgtype.Timestamptz
 	ExpiresAt         pgtype.Timestamp
 	ExpiresAtTimezone string
+	KeyHash           []byte
 }
