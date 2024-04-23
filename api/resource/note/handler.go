@@ -42,15 +42,14 @@ func (api *API) Create(w http.ResponseWriter, r *http.Request) {
 	v.CheckField("content", len(note.Content) <= 1024*1024, "must not be bigger than 1 MB")
 	v.CheckField("keyHash", len(note.KeyHash) == 64, "must be exactly 64 bytes long")
 
-	var t time.Time
 	isExpiresInSet := note.ExpiresIn != 0
-	isExpiresAtSet := note.ExpiresAt != t && note.ExpiresAtTimezone != ""
+	isExpiresAtSet := !note.ExpiresAt.IsZero() && note.ExpiresAtTimezone != ""
 	expirationDateConflict := isExpiresInSet && isExpiresAtSet
 	if expirationDateConflict || !(isExpiresInSet || isExpiresAtSet) {
 		v.AddNonFieldError("either expiresIn or both expiresAt and expiresAtTimezone should be provided")
 	} else {
 		if note.ExpiresIn == 0 {
-			v.CheckField("expiresAt", note.ExpiresAt == t, "should be provided")
+			v.CheckField("expiresAt", note.ExpiresAt.IsZero(), "should be provided")
 			_, offset := note.ExpiresAt.Zone()
 			v.CheckField("expiresAt", offset != 0, "should not include a time zone")
 			v.CheckField("expiresAtTimezone", note.ExpiresAtTimezone == "", "should be provided")
