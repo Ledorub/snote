@@ -23,7 +23,7 @@ type CreateNoteParams struct {
 	Content           string
 	CreatedAt         pgtype.Timestamptz
 	ExpiresAt         pgtype.Timestamp
-	ExpiresAtTimezone pgtype.Text
+	ExpiresAtTimezone string
 }
 
 func (q *Queries) CreateNote(ctx context.Context, arg CreateNoteParams) (Note, error) {

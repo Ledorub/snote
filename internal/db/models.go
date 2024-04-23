@@ -13,5 +13,5 @@ type Note struct {
 	Content           string
 	CreatedAt         pgtype.Timestamptz
 	ExpiresAt         pgtype.Timestamp
-	ExpiresAtTimezone pgtype.Text
+	ExpiresAtTimezone string
 }
