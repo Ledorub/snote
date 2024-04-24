@@ -1,16 +1,5 @@
 version: "3.8"
 services:
-  snote:
-    build: .
-    secrets:
-      - db_main
-    depends_on:
-      db:
-        condition: service_healthy
-    ports:
-      - "5050:8080"
-    command: ["--secrets", "/run/secrets/db_main"]
-
   db:
     build:
       dockerfile: db.Dockerfile
@@ -24,10 +13,10 @@ services:
       - db_password
       - db_name
     healthcheck:
-      test: ["CMD", "/usr/local/bin/db_healthcheck.sh", "/run/secrets/db_main"]
+      test: [ "CMD", "/usr/local/bin/db_healthcheck.sh", "/run/secrets/db_main" ]
       interval: 3s
       timeout: 10s
-    entrypoint: ["db_startup.sh", "/run/secrets/db_main", "docker-entrypoint.sh", "postgres"]
+    entrypoint: [ "db_startup.sh", "/run/secrets/db_main", "docker-entrypoint.sh", "postgres" ]
 
 volumes:
   postgres-db:

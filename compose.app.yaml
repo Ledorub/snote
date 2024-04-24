@@ -1,0 +1,12 @@
+version: "3.8"
+services:
+  snote:
+    build: .
+    secrets:
+      - db_main
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "5050:8080"
+    command: [ "--secrets", "/run/secrets/db_main" ]
