@@ -31,7 +31,7 @@ main () {
   credentials_string=""
   credentials_to_string credentials credentials_string
 
-  start_db $@
+  start_db "$@"
 }
 
 fatal_error() {
