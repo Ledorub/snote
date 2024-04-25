@@ -1,0 +1,67 @@
+# Extends compose.db.yaml
+
+version: "3.8"
+services:
+  snote:
+    build: .
+    profiles:
+      - app
+    depends_on:
+      db:
+        condition: service_healthy
+    secrets:
+      - db_main
+    ports:
+      - "5050:8080"
+    command: [ "--secrets", "/run/secrets/db_main" ]
+  db:
+    build:
+      dockerfile: db.Dockerfile
+    profiles:
+      - app
+      - migration
+    volumes:
+      - type: volume
+        source: postgres-db
+        target: /var/lib/postgresql/data
+    secrets:
+      - db_main
+      - db_user
+      - db_password
+      - db_name
+    healthcheck:
+      test: [ "CMD", "/usr/local/bin/db_healthcheck.sh", "/run/secrets/db_main" ]
+      interval: 3s
+      timeout: 10s
+    entrypoint: [ "db_startup.sh", "/run/secrets/db_main", "docker-entrypoint.sh", "postgres" ]
+  migrate:
+    build:
+      dockerfile: migrate.Dockerfile
+    profiles:
+      - migration
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - type: bind
+        source: ./internal/db/migrations
+        target: /usr/local/src/migrations
+    secrets:
+      - db_main
+      - db_user
+      - db_password
+      - db_name
+    command: [ "db", "5432", "/run/secrets/db_main", "up", "/usr/local/src/migrations" ]
+
+volumes:
+  postgres-db:
+
+secrets:
+  db_main:
+    file: secrets/db/main.txt
+  db_user:
+    file: secrets/db/user.txt
+  db_password:
+    file: secrets/db/password.txt
+  db_name:
+    file: secrets/db/name.txt
