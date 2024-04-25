@@ -1,0 +1,20 @@
+# Extends compose.db.yaml
+
+version: "3.8"
+services:
+  migrate:
+    build:
+      dockerfile: migrate.Dockerfile
+    volumes:
+      - type: bind
+        source: ./internal/db/migrations
+        target: /usr/local/src/migrations
+    secrets:
+      - db_main
+      - db_user
+      - db_password
+      - db_name
+    depends_on:
+      db:
+        condition: service_healthy
+    command: ["db", "5432", "/run/secrets/db_main", "up", "/usr/local/src/migrations"]
