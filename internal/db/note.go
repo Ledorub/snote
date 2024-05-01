@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/ledorub/snote-api/internal"
 	"log"
-	"time"
 )
 
 type TaskRepository struct {
@@ -17,37 +16,25 @@ func NewTaskRepository(logger *log.Logger, queries *Queries) *TaskRepository {
 	return &TaskRepository{logger: logger, queries: queries}
 }
 
-func (r *TaskRepository) Create(
-	ctx context.Context,
-	content string,
-	createdAt time.Time,
-	expiresAt time.Time,
-	expiresAtTimeZone *time.Location,
-	keyHash []byte,
-) (internal.Note, error) {
-	note, err := r.queries.CreateNote(ctx, CreateNoteParams{
-		Content:           content,
-		CreatedAt:         newTimestampTZ(createdAt),
-		ExpiresAt:         newTimestamp(expiresAt),
-		ExpiresAtTimezone: expiresAtTimeZone.String(),
-		KeyHash:           keyHash,
+func (r *TaskRepository) Create(ctx context.Context, note *internal.NoteModel) (*internal.NoteModel, error) {
+	createdNote, err := r.queries.CreateNote(ctx, CreateNoteParams{
+		Content:           *note.Content,
+		CreatedAt:         newTimestampTZ(note.CreatedAt),
+		ExpiresAt:         newTimestamp(note.ExpiresAt),
+		ExpiresAtTimezone: note.ExpiresAtTimeZone,
+		KeyHash:           note.KeyHash,
 	})
 	if err != nil {
-		return internal.Note{}, fmt.Errorf("insertion failed: %w", err)
-	}
-	tz, err := time.LoadLocation(note.ExpiresAtTimezone)
-	if err != nil {
-		return internal.Note{}, fmt.Errorf("received invalid TZ from the DB: %w", err)
+		return &internal.NoteModel{}, fmt.Errorf("creation failed: %w", err)
 	}
 
-	return internal.Note{
-		ID:                pgIntToUInt64(note.ID),
-		Content:           note.Content,
-		CreatedAt:         note.CreatedAt.Time,
-		ExpiresAt:         note.ExpiresAt.Time,
-		ExpiresAtTimeZone: tz,
-		KeyHash:           keyHash,
-	}, nil
+	note.ID = pgIntToUInt64(createdNote.ID)
+	note.Content = &createdNote.Content
+	note.CreatedAt = createdNote.CreatedAt.Time
+	note.ExpiresAt = createdNote.ExpiresAt.Time
+	note.ExpiresAtTimeZone = createdNote.ExpiresAtTimezone
+	note.KeyHash = createdNote.KeyHash
+	return note, nil
 }
 
 func (r *TaskRepository) Delete(ctx context.Context, id uint64) error {
