@@ -1,50 +1,60 @@
 package validator
 
-import "cmp"
+import (
+	"cmp"
+	"time"
+)
+
+type ValidationError string
+
+func (e ValidationError) Error() string {
+	return string(e)
+}
 
 type Validator struct {
-	NonFieldErrors []string
-	FieldErrors    map[string]string
+	Errors []ValidationError
 }
 
 func (v *Validator) CheckIsValid() bool {
-	return len(v.NonFieldErrors) == 0 && len(v.FieldErrors) == 0
+	return len(v.Errors) == 0
 }
 
-func (v *Validator) AddNonFieldError(message string) {
-	v.NonFieldErrors = append(v.NonFieldErrors, message)
+func (v *Validator) AddError(message string) {
+	v.Errors = append(v.Errors, ValidationError(message))
 }
 
-func (v *Validator) AddFieldError(field, message string) {
-	if v.FieldErrors == nil {
-		v.FieldErrors = make(map[string]string)
-	}
-
-	if _, exists := v.FieldErrors[field]; !exists {
-		v.FieldErrors[field] = message
-	}
-}
-
-func (v *Validator) CheckField(field string, ok bool, message string) {
+func (v *Validator) Check(ok bool, message string) {
 	if !ok {
-		v.AddFieldError(field, message)
+		v.AddError(message)
 	}
 }
 
-func (v *Validator) GetNonFieldErrors() []string {
-	return v.NonFieldErrors
-}
-
-func (v *Validator) GetFieldErrors() map[string]string {
-	return v.FieldErrors
+func (v *Validator) GetErrors() []ValidationError {
+	return v.Errors
 }
 
 func New() *Validator {
-	return &Validator{
-		FieldErrors: make(map[string]string),
-	}
+	return &Validator{}
 }
 
+// ValidateValueInRange checks that low <= v <= high.
 func ValidateValueInRange[T cmp.Ordered](v, low, high T) bool {
 	return v >= low && v <= high
+}
+
+// ValidateASCIIAlphaNumeric checks that s is in A-Za-z0-9.
+func ValidateASCIIAlphaNumeric(s string) bool {
+	for _, char := range s {
+		isLetter := char >= 'A' && char <= 'Z' || char >= 'a' && char <= 'z'
+		isDigit := char >= '0' && char <= '9'
+		if !(isLetter || isDigit) {
+			return false
+		}
+	}
+	return true
+}
+
+// ValidateTimeInRange checks that low < t <= high.
+func ValidateTimeInRange(t, low, high time.Time) bool {
+	return t.After(low) && t.Before(high) || t.Equal(high)
 }
