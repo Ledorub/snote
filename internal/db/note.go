@@ -7,16 +7,16 @@ import (
 	"log"
 )
 
-type TaskRepository struct {
+type NoteRepository struct {
 	logger  *log.Logger
 	queries *Queries
 }
 
-func NewTaskRepository(logger *log.Logger, queries *Queries) *TaskRepository {
-	return &TaskRepository{logger: logger, queries: queries}
+func NewNoteRepository(logger *log.Logger, queries *Queries) *NoteRepository {
+	return &NoteRepository{logger: logger, queries: queries}
 }
 
-func (r *TaskRepository) Create(ctx context.Context, note *internal.NoteModel) (*internal.NoteModel, error) {
+func (r *NoteRepository) Create(ctx context.Context, note *internal.NoteModel) (*internal.NoteModel, error) {
 	createdNote, err := r.queries.CreateNote(ctx, CreateNoteParams{
 		Content:           *note.Content,
 		CreatedAt:         newTimestampTZ(note.CreatedAt),
@@ -37,7 +37,7 @@ func (r *TaskRepository) Create(ctx context.Context, note *internal.NoteModel) (
 	return note, nil
 }
 
-func (r *TaskRepository) Delete(ctx context.Context, id uint64) error {
+func (r *NoteRepository) Delete(ctx context.Context, id uint64) error {
 	pgInt, err := uInt64ToPgInt8(id)
 	if err != nil {
 		return err
