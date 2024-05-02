@@ -2,6 +2,7 @@ package internal
 
 import (
 	"errors"
+	"github.com/ledorub/snote-api/internal/datetime"
 	"github.com/ledorub/snote-api/internal/validator"
 	"time"
 )
@@ -76,6 +77,7 @@ func NewNote(
 	if err != nil && expiresIn == 0 {
 		return &Note{}, err
 	}
+	expiresAt = datetime.TimeAsLocalTime(expiresAt, tz)
 
 	note := &Note{
 		ID:                id,
