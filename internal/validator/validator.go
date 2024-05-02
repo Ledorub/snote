@@ -42,12 +42,13 @@ func ValidateValueInRange[T cmp.Ordered](v, low, high T) bool {
 	return v >= low && v <= high
 }
 
-// ValidateASCIIAlphaNumeric checks that s is in A-Za-z0-9.
-func ValidateASCIIAlphaNumeric(s string) bool {
+// ValidateB58String checks that s is a valid base58 string.
+func ValidateB58String(s string) bool {
 	for _, char := range s {
-		isLetter := char >= 'A' && char <= 'Z' || char >= 'a' && char <= 'z'
-		isDigit := char >= '0' && char <= '9'
-		if !(isLetter || isDigit) {
+		validUpperLetter := char != 'O' && char != 'I' && char >= 'A' && char <= 'Z'
+		validLowerLetter := char != 'l' && char >= 'A' && char <= 'Z'
+		validDigit := char >= '1' && char <= '9'
+		if !(validUpperLetter || validLowerLetter || validDigit) {
 			return false
 		}
 	}
