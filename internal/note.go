@@ -73,7 +73,7 @@ func NewNote(
 	keyHash []byte,
 ) (*Note, error) {
 	tz, err := time.LoadLocation(expiresAtTimeZone)
-	if err != nil {
+	if err != nil && expiresIn == 0 {
 		return &Note{}, err
 	}
 
