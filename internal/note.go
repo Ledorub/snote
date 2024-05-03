@@ -2,6 +2,7 @@ package internal
 
 import (
 	"errors"
+	"fmt"
 	"github.com/ledorub/snote-api/internal/datetime"
 	"github.com/ledorub/snote-api/internal/validator"
 	"time"
@@ -66,7 +67,6 @@ func (n *Note) CheckErrors() error {
 }
 
 func NewNote(
-	id string,
 	content *string,
 	expiresIn time.Duration,
 	expiresAt time.Time,
@@ -75,12 +75,11 @@ func NewNote(
 ) (*Note, error) {
 	tz, err := time.LoadLocation(expiresAtTimeZone)
 	if err != nil && expiresIn == 0 {
-		return &Note{}, err
+		return &Note{}, fmt.Errorf("unable to load time zone %v: %w", tz, err)
 	}
 	expiresAt = datetime.TimeAsLocalTime(expiresAt, tz)
 
 	note := &Note{
-		ID:                id,
 		Content:           content,
 		CreatedAt:         time.Now(),
 		ExpiresIn:         expiresIn,
