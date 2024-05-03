@@ -1,7 +1,10 @@
 package note
 
 import (
+	"errors"
 	"github.com/ledorub/snote-api/api/common"
+	"github.com/ledorub/snote-api/internal"
+	"github.com/ledorub/snote-api/internal/validator"
 	"log"
 	"net/http"
 	"time"
@@ -12,68 +15,96 @@ type API struct {
 	requestReader    common.RequestReader
 	responseWriter   common.ResponseWriter
 	validatorFactory common.ValidatorFactory
+	noteService      common.NoteService
 }
 
-func New(logger *log.Logger, requestReader common.RequestReader, responseWriter common.ResponseWriter, validatorFactory common.ValidatorFactory) *API {
+func New(
+	logger *log.Logger,
+	requestReader common.RequestReader,
+	responseWriter common.ResponseWriter,
+	validatorFactory common.ValidatorFactory,
+	noteService common.NoteService,
+) *API {
 	return &API{
 		logger:           logger,
 		requestReader:    requestReader,
 		responseWriter:   responseWriter,
 		validatorFactory: validatorFactory,
+		noteService:      noteService,
 	}
 }
 
 func (api *API) Create(w http.ResponseWriter, r *http.Request) {
 	type noteCreate struct {
-		Content           string    `json:"content"`
-		ExpiresAt         time.Time `json:"expiresAt"`
-		ExpiresAtTimezone string    `json:"expiresAtTimezone"`
-		ExpiresIn         int       `json:"expiresIn"`
-		KeyHash           string    `json:"keyHash"`
+		Content           string        `json:"content"`
+		ExpiresAt         time.Time     `json:"expiresAt"`
+		ExpiresAtTimezone string        `json:"expiresAtTimezone"`
+		ExpiresIn         time.Duration `json:"expiresIn"`
+		KeyHash           []byte        `json:"keyHash"`
 	}
-	note := noteCreate{}
-	if err := api.requestReader.Read(r.Body, &note); err != nil {
+	noteData := noteCreate{}
+	if err := api.requestReader.Read(r.Body, &noteData); err != nil {
 		api.responseWriter.WriteBadRequest(w, r, err)
 		return
 	}
 
 	v := api.validatorFactory()
-	v.CheckField("content", note.Content != "", "must not be empty")
-	v.CheckField("content", len(note.Content) <= 1024*1024, "must not be bigger than 1 MB")
-	v.CheckField("keyHash", len(note.KeyHash) == 64, "must be exactly 64 bytes long")
+	v.Check(noteData.Content != "", "content must not be empty")
+	v.Check(len(noteData.KeyHash) != 0, "key hash must not be empty")
 
-	isExpiresInSet := note.ExpiresIn != 0
-	isExpiresAtSet := !note.ExpiresAt.IsZero() && note.ExpiresAtTimezone != ""
+	isExpiresInSet := noteData.ExpiresIn != 0
+	isExpiresAtSet := !noteData.ExpiresAt.IsZero() && noteData.ExpiresAtTimezone != ""
 	expirationDateConflict := isExpiresInSet && isExpiresAtSet
-	if expirationDateConflict || !(isExpiresInSet || isExpiresAtSet) {
-		v.AddNonFieldError("either expiresIn or both expiresAt and expiresAtTimezone should be provided")
-	} else {
-		if note.ExpiresIn == 0 {
-			v.CheckField("expiresAt", note.ExpiresAt.IsZero(), "should be provided")
-			_, offset := note.ExpiresAt.Zone()
-			v.CheckField("expiresAt", offset != 0, "should not include a time zone")
-			v.CheckField("expiresAtTimezone", note.ExpiresAtTimezone == "", "should be provided")
-
-			tz, err := time.LoadLocation(note.ExpiresAtTimezone)
-			v.CheckField("expiresAtTimezone", err != nil, "should be a valid time zone id")
-
-			if v.CheckIsValid() {
-				expirationTime := note.ExpiresAt.In(tz)
-				expiresAtGELimit := time.Until(expirationTime) >= 10*time.Minute
-				v.CheckField("expiresAt", expiresAtGELimit, "should be at least 10 minutes in the future")
-			}
-		} else {
-			expiresInGELimit := note.ExpiresIn*int(time.Second) >= int(10*time.Minute)
-			v.CheckField("expiresIn", expiresInGELimit, "should not be less than 600 seconds")
-		}
-	}
-
+	v.Check(
+		expirationDateConflict || !(isExpiresInSet || isExpiresAtSet),
+		"either expiresIn or both expiresAt and expiresAtTimezone should be provided",
+	)
 	if !v.CheckIsValid() {
-		errors := common.MergeValidationErrors(v)
-		api.responseWriter.WriteValidationError(w, r, errors)
+		var validationErrors []error
+		for _, err := range v.GetErrors() {
+			validationErrors = append(validationErrors, err)
+		}
+		api.responseWriter.WriteValidationError(w, r, validationErrors)
 		return
 	}
-	api.responseWriter.Write(w, r, http.StatusCreated, note)
+
+	note, err := internal.NewNote(
+		&noteData.Content,
+		noteData.ExpiresIn,
+		noteData.ExpiresAt,
+		noteData.ExpiresAtTimezone,
+		noteData.KeyHash,
+	)
+	if err != nil {
+		api.responseWriter.WriteValidationError(w, r, []error{err})
+		return
+	}
+
+	note, err = api.noteService.CreateNote(r.Context(), note)
+	if err != nil {
+		var validationError validator.ValidationError
+		if errors.As(err, &validationError) {
+			api.responseWriter.WriteValidationError(w, r, []error{validationError})
+			return
+		}
+		api.responseWriter.WriteServerError(w, r, err)
+		return
+	}
+
+	type noteCreateResponse struct {
+		ID                string    `json:"id"`
+		ExpiresAt         time.Time `json:"expiresAt"`
+		ExpiresAtTimeZone string    `json:"expiresAtTimeZone"`
+		KeyHash           []byte    `json:"keyHash"`
+	}
+	noteResponse := noteCreateResponse{
+		ID:                note.ID,
+		ExpiresAt:         note.ExpiresAt,
+		ExpiresAtTimeZone: note.ExpiresAtTimeZone.String(),
+		KeyHash:           note.KeyHash,
+	}
+
+	api.responseWriter.Write(w, r, http.StatusCreated, noteResponse)
 }
 
 func (api *API) Read(w http.ResponseWriter, r *http.Request) {

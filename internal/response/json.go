@@ -53,12 +53,11 @@ func (writer *JSONResponseWriter) WriteBadRequest(w http.ResponseWriter, r *http
 	writer.WriteError(w, r, http.StatusBadRequest, errors)
 }
 
-func (writer *JSONResponseWriter) WriteValidationError(w http.ResponseWriter, r *http.Request, errs []map[string]string) {
+func (writer *JSONResponseWriter) WriteValidationError(w http.ResponseWriter, r *http.Request, errs []error) {
 	errors := make(errorList, len(errs))
 	for i, err := range errs {
-		errors[i] = make(map[string]any, len(err))
-		for k, v := range err {
-			errors[i][k] = v
+		errors[i] = map[string]any{
+			"message": err.Error(),
 		}
 	}
 	writer.WriteError(w, r, http.StatusUnprocessableEntity, errors)

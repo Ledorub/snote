@@ -1,6 +1,9 @@
 package common
 
 import (
+	"context"
+	"github.com/ledorub/snote-api/internal"
+	"github.com/ledorub/snote-api/internal/validator"
 	"io"
 	"net/http"
 )
@@ -20,18 +23,17 @@ type ResponseWriter interface {
 	WriteServerError(http.ResponseWriter, *http.Request, error)
 	WriteNotFound(http.ResponseWriter, *http.Request)
 	WriteBadRequest(http.ResponseWriter, *http.Request, error)
-	WriteValidationError(http.ResponseWriter, *http.Request, ValidationErrors)
+	WriteValidationError(http.ResponseWriter, *http.Request, []error)
 }
 
 type Validator interface {
+	Check(bool, string)
 	CheckIsValid() bool
-	AddNonFieldError(string)
-	AddFieldError(string, string)
-	CheckField(string, bool, string)
-	GetNonFieldErrors() []string
-	GetFieldErrors() map[string]string
+	GetErrors() []validator.ValidationError
 }
 
 type ValidatorFactory = func() Validator
 
-type ValidationErrors = []map[string]string
+type NoteService interface {
+	CreateNote(ctx context.Context, note *internal.Note) (*internal.Note, error)
+}
