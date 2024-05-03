@@ -7,10 +7,16 @@ import (
 	"net/http"
 )
 
-func New(logger *log.Logger, requestReader common.RequestReader, responseWriter common.ResponseWriter, validatorFactory common.ValidatorFactory) *http.ServeMux {
+func New(
+	logger *log.Logger,
+	requestReader common.RequestReader,
+	responseWriter common.ResponseWriter,
+	validatorFactory common.ValidatorFactory,
+	noteService common.NoteService,
+) *http.ServeMux {
 	mux := http.NewServeMux()
 
-	noteAPI := note.New(logger, requestReader, responseWriter, validatorFactory)
+	noteAPI := note.New(logger, requestReader, responseWriter, validatorFactory, noteService)
 
 	mux.HandleFunc("POST /{noteID}", noteAPI.Create)
 	mux.HandleFunc("GET /{noteID}", noteAPI.Read)
