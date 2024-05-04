@@ -18,7 +18,7 @@ import (
 
 func main() {
 	cfg := config.New()
-	fmt.Printf("Got port %d.\n", cfg.Port)
+	fmt.Printf("Got port %d.\n", cfg.Server.Port)
 	log := logger.New()
 	log.Println("Set up logger.")
 
@@ -37,7 +37,7 @@ func main() {
 
 	maxBytes := 1_048_576
 	srv := &http.Server{
-		Addr:    fmt.Sprintf(":%d", cfg.Port),
+		Addr:    fmt.Sprintf(":%d", cfg.Server.Port),
 		Handler: http.MaxBytesHandler(http.Handler(noteAPI), int64(maxBytes)),
 	}
 
