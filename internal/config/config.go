@@ -6,17 +6,24 @@ import (
 	"log"
 )
 
-type source string
+type sourceType string
 
 const (
-	SourceUnset    source = ""
-	FileSource     source = "file"
-	ArgumentSource source = "argument"
+	SourceUnset    sourceType = ""
+	FileSource     sourceType = "file"
+	ArgumentSource sourceType = "argument"
 )
 
 type configValue[T any] struct {
 	Value  T
-	Source source
+	Source sourceType
+}
+
+func (cv *configValue[T]) Set(value T, src sourceType) {
+	if cv.Source == SourceUnset {
+		cv.Value = value
+		cv.Source = src
+	}
 }
 
 type Config struct {
@@ -48,10 +55,7 @@ func (vs valueSetter) setValueFor(name string) {
 func addArg[T any](valueSetter *valueSetter, reg argReg[T], cfgValue *configValue[T], name string, value T, usage string) {
 	parsedValue := reg(name, value, usage)
 	valueSetter.addSetterFor(name, func() {
-		if cfgValue.Source == SourceUnset {
-			cfgValue.Value = *parsedValue
-			cfgValue.Source = ArgumentSource
-		}
+		cfgValue.Set(*parsedValue, ArgumentSource)
 	})
 }
 
