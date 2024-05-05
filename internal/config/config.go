@@ -66,7 +66,7 @@ func loadFromArgs() *Config {
 	addArg[uint64](flag.Uint64, "port", 4000, "API server port", setters, &cfg.Server.Port)
 
 	flag.Parse()
-	flag.Visit(func(f *flag.Flag) {
+	flag.VisitAll(func(f *flag.Flag) {
 		setters.setValueFor(f.Name)
 	})
 
