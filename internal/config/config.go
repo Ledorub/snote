@@ -40,21 +40,21 @@ func New() *Config {
 
 type argReg[T any] func(name string, value T, usage string) *T
 
-type valueSetter map[string]func()
+type valueSetters map[string]func()
 
-func (vs valueSetter) addSetterFor(name string, setter func()) {
+func (vs valueSetters) addSetterFor(name string, setter func()) {
 	vs[name] = setter
 }
 
-func (vs valueSetter) setValueFor(name string) {
+func (vs valueSetters) setValueFor(name string) {
 	if setter, exists := vs[name]; exists {
 		setter()
 	}
 }
 
-func addArg[T any](valueSetter *valueSetter, reg argReg[T], cfgValue *configValue[T], name string, value T, usage string) {
+func addArg[T any](reg argReg[T], name string, value T, usage string, setters *valueSetters, cfgValue *configValue[T]) {
 	parsedValue := reg(name, value, usage)
-	valueSetter.addSetterFor(name, func() {
+	setters.addSetterFor(name, func() {
 		cfgValue.Set(*parsedValue, ArgumentSource)
 	})
 }
@@ -62,12 +62,12 @@ func addArg[T any](valueSetter *valueSetter, reg argReg[T], cfgValue *configValu
 func loadFromArgs() *Config {
 	var cfg Config
 
-	setter := &valueSetter{}
-	addArg[uint64](setter, flag.Uint64, &cfg.Server.Port, "port", 4000, "API server port")
+	setters := &valueSetters{}
+	addArg[uint64](flag.Uint64, "port", 4000, "API server port", setters, &cfg.Server.Port)
 
 	flag.Parse()
 	flag.Visit(func(f *flag.Flag) {
-		setter.setValueFor(f.Name)
+		setters.setValueFor(f.Name)
 	})
 
 	if !validator.ValidateValueInRange[uint64](cfg.Server.Port.Value, 1024, 65535) {
