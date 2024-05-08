@@ -10,7 +10,7 @@ import (
 
 type JSONEncoder struct{}
 
-func (enc *JSONEncoder) Encode(data any) ([]byte, error) {
+func (e *JSONEncoder) Encode(data any) ([]byte, error) {
 	return gojson.Marshal(data)
 }
 
@@ -20,7 +20,7 @@ func NewJSONEncoder() *JSONEncoder {
 
 type JSONDecoder struct{}
 
-func (enc *JSONDecoder) Decode(data io.Reader, dst any) error {
+func (d *JSONDecoder) Decode(data io.Reader, dst any) error {
 	dec := gojson.NewDecoder(data)
 	dec.DisallowUnknownFields()
 
