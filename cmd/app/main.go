@@ -13,27 +13,32 @@ import (
 	"github.com/ledorub/snote-api/internal/response"
 	"github.com/ledorub/snote-api/internal/service"
 	"github.com/ledorub/snote-api/internal/validator"
+	"log"
 	"net/http"
 )
 
 func main() {
-	cfg := config.Load()
+	cfgLoader := config.NewLoader(config.LoadArgs())
+	cfg, err := cfgLoader.Load()
+	if err != nil {
+		log.Fatal(err)
+	}
 	fmt.Printf("Got port %d.\n", cfg.Server.Port)
-	log := logger.New()
-	log.Println("Set up logger.")
+	lg := logger.New()
+	lg.Println("Set up logger.")
 
 	dsn := "postgres://jack:secret@pg.example.com:5432/mydb"
 	dbPool, err := db.CreatePool(context.Background(), dsn)
 	if err != nil {
-		log.Fatal(err)
+		lg.Fatal(err)
 	}
-	noteRepo := db.NewNoteRepository(log, db.New(dbPool))
-	noteService := service.New(log, noteRepo)
+	noteRepo := db.NewNoteRepository(lg, db.New(dbPool))
+	noteService := service.New(lg, noteRepo)
 
-	jsonRequestReader := request.NewJSONReader(log, encdec.NewJSONDecoder())
-	jsonResponseWriter := response.NewJSONWriter(log, encdec.NewJSONEncoder())
+	jsonRequestReader := request.NewJSONReader(lg, encdec.NewJSONDecoder())
+	jsonResponseWriter := response.NewJSONWriter(lg, encdec.NewJSONEncoder())
 	validatorFactory := func() common.Validator { return validator.New() }
-	noteAPI := router.New(log, jsonRequestReader, jsonResponseWriter, validatorFactory, noteService)
+	noteAPI := router.New(lg, jsonRequestReader, jsonResponseWriter, validatorFactory, noteService)
 
 	maxBytes := 1_048_576
 	srv := &http.Server{
@@ -41,7 +46,7 @@ func main() {
 		Handler: http.MaxBytesHandler(http.Handler(noteAPI), int64(maxBytes)),
 	}
 
-	log.Printf("Starting the server at %s", srv.Addr)
+	lg.Printf("Starting the server at %s", srv.Addr)
 	err = srv.ListenAndServe()
-	log.Fatal(err)
+	lg.Fatal(err)
 }

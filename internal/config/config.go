@@ -2,8 +2,8 @@ package config
 
 import (
 	"flag"
+	"fmt"
 	"github.com/ledorub/snote-api/internal/validator"
-	"log"
 )
 
 type sourceType string
@@ -18,26 +18,15 @@ type Config struct {
 	Server ServerConfig
 }
 
-func (cfg *Config) load() {
-
-	parsedArgs := loadArgs()
-
-	if !validator.ValidateValueInRange[uint64](parsedArgs.port, 1024, 65535) {
-		log.Fatalf("Invalid port value %d. Should be in-between 1024 and 65535", parsedArgs.port)
+func (cfg *Config) checkErrors() error {
+	if !validator.ValidateValueInRange[uint64](cfg.Server.Port.Value, 1024, 65535) {
+		return fmt.Errorf("invalid port value %d. Should be in-between 1024 and 65535", cfg.Server.Port.Value)
 	}
-
-	setters := configValueSetters{}
-	mapArgsToConfigValues(setters, parsedArgs, cfg)
+	return nil
 }
 
 type ServerConfig struct {
 	Port configValue[uint64]
-}
-
-func Load() *Config {
-	cfg := &Config{}
-	cfg.load()
-	return cfg
 }
 
 type configValue[T any] struct {
@@ -90,4 +79,44 @@ func mapToConfigValue[T any](mp configValueSetters, name string, src sourceType,
 
 func mapArgsToConfigValues(mp configValueSetters, a *args, cfg *Config) {
 	mapToConfigValue[uint64](mp, "port", ArgumentSource, &a.port, &cfg.Server.Port)
+}
+
+type Loader struct {
+	shouldLoadArgs bool
+}
+
+func NewLoader(opts ...LoaderOpt) *Loader {
+	loader := &Loader{}
+	for _, opt := range opts {
+		opt(loader)
+	}
+	return loader
+}
+
+func (l *Loader) Load() (*Config, error) {
+	cfg := &Config{}
+	setters := configValueSetters{}
+
+	if l.shouldLoadArgs {
+		loadedArgs := l.loadArgs()
+		mapArgsToConfigValues(setters, loadedArgs, cfg)
+	}
+
+	setters.setValueForAll()
+	if err := cfg.checkErrors(); err != nil {
+		return nil, err
+	}
+	return cfg, nil
+}
+
+func (l *Loader) loadArgs() *args {
+	return loadArgs()
+}
+
+type LoaderOpt func(l *Loader)
+
+func LoadArgs() LoaderOpt {
+	return func(l *Loader) {
+		l.shouldLoadArgs = true
+	}
 }
