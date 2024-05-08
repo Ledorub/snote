@@ -17,7 +17,7 @@ import (
 )
 
 func main() {
-	cfg := config.New()
+	cfg := config.Load()
 	fmt.Printf("Got port %d.\n", cfg.Server.Port)
 	log := logger.New()
 	log.Println("Set up logger.")

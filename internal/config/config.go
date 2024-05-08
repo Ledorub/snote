@@ -14,6 +14,32 @@ const (
 	ArgumentSource sourceType = "argument"
 )
 
+type Config struct {
+	Server ServerConfig
+}
+
+func (cfg *Config) load() {
+
+	parsedArgs := loadArgs()
+
+	if !validator.ValidateValueInRange[uint64](parsedArgs.port, 1024, 65535) {
+		log.Fatalf("Invalid port value %d. Should be in-between 1024 and 65535", parsedArgs.port)
+	}
+
+	setters := configValueSetters{}
+	mapArgsToConfigValues(setters, parsedArgs, cfg)
+}
+
+type ServerConfig struct {
+	Port configValue[uint64]
+}
+
+func Load() *Config {
+	cfg := &Config{}
+	cfg.load()
+	return cfg
+}
+
 type configValue[T any] struct {
 	Value  T
 	Source sourceType
@@ -26,52 +52,42 @@ func (cv *configValue[T]) Set(value T, src sourceType) {
 	}
 }
 
-type Config struct {
-	Server ServerConfig
+type configValueSetters map[string]func()
+
+func (s configValueSetters) addSetterFor(name string, setter func()) {
+	s[name] = setter
 }
 
-type ServerConfig struct {
-	Port configValue[uint64]
-}
-
-func New() *Config {
-	return loadFromArgs()
-}
-
-type argReg[T any] func(name string, value T, usage string) *T
-
-type valueSetters map[string]func()
-
-func (vs valueSetters) addSetterFor(name string, setter func()) {
-	vs[name] = setter
-}
-
-func (vs valueSetters) setValueFor(name string) {
-	if setter, exists := vs[name]; exists {
+func (s configValueSetters) setValueFor(name string) {
+	if setter, exists := s[name]; exists {
 		setter()
 	}
 }
 
-func addArg[T any](reg argReg[T], name string, value T, usage string, setters *valueSetters, cfgValue *configValue[T]) {
-	parsedValue := reg(name, value, usage)
-	setters.addSetterFor(name, func() {
-		cfgValue.Set(*parsedValue, ArgumentSource)
+func (s configValueSetters) setValueForAll() {
+	for _, setter := range s {
+		setter()
+	}
+}
+
+type args struct {
+	port uint64
+}
+
+func loadArgs() *args {
+	a := args{}
+	flag.Uint64Var(&a.port, "port", 4000, "API server port")
+	flag.Parse()
+
+	return &a
+}
+
+func mapToConfigValue[T any](mp configValueSetters, name string, src sourceType, from *T, to *configValue[T]) {
+	mp.addSetterFor(name, func() {
+		to.Set(*from, src)
 	})
 }
 
-func loadFromArgs() *Config {
-	var cfg Config
-
-	setters := &valueSetters{}
-	addArg[uint64](flag.Uint64, "port", 4000, "API server port", setters, &cfg.Server.Port)
-
-	flag.Parse()
-	flag.VisitAll(func(f *flag.Flag) {
-		setters.setValueFor(f.Name)
-	})
-
-	if !validator.ValidateValueInRange[uint64](cfg.Server.Port.Value, 1024, 65535) {
-		log.Fatalf("Invalid port value %d. Should be in-between 1024 and 65535", cfg.Server.Port.Value)
-	}
-	return &cfg
+func mapArgsToConfigValues(mp configValueSetters, a *args, cfg *Config) {
+	mapToConfigValue[uint64](mp, "port", ArgumentSource, &a.port, &cfg.Server.Port)
 }
