@@ -1,9 +1,13 @@
 package config
 
 import (
+	"bufio"
 	"flag"
 	"fmt"
+	"github.com/ledorub/snote-api/internal/encdec"
 	"github.com/ledorub/snote-api/internal/validator"
+	"io"
+	"os"
 )
 
 type sourceType string
@@ -60,12 +64,14 @@ func (s configValueSetters) setValueForAll() {
 }
 
 type args struct {
-	port uint64
+	port       uint64
+	configFile string
 }
 
 func loadArgs() *args {
 	a := args{}
 	flag.Uint64Var(&a.port, "port", 4000, "API server port")
+	flag.StringVar(&a.configFile, "config-file", "", "Path to a config file")
 	flag.Parse()
 
 	return &a
@@ -81,14 +87,24 @@ func mapArgsToConfigValues(mp configValueSetters, a *args, cfg *Config) {
 	mapToConfigValue[uint64](mp, "port", ArgumentSource, &a.port, &cfg.Server.Port)
 }
 
+func mapConfigFileToConfigValues(mp configValueSetters, cfgF *configFile, cfg *Config) {
+	mapToConfigValue[uint64](mp, "port", FileSource, &cfgF.Server.Port, &cfg.Server.Port)
+}
+
 type Loader struct {
-	shouldLoadArgs bool
+	shouldLoadArgs    bool
+	configFile        string
+	configFileDecoder configFileDecoder
 }
 
 func NewLoader(opts ...LoaderOpt) *Loader {
 	loader := &Loader{}
 	for _, opt := range opts {
 		opt(loader)
+	}
+
+	if loader.configFileDecoder == nil {
+		loader.configFileDecoder = encdec.NewYAMLDecoder()
 	}
 	return loader
 }
@@ -100,6 +116,18 @@ func (l *Loader) Load() (*Config, error) {
 	if l.shouldLoadArgs {
 		loadedArgs := l.loadArgs()
 		mapArgsToConfigValues(setters, loadedArgs, cfg)
+
+		if l.configFile == "" {
+			l.configFile = loadedArgs.configFile
+		}
+	}
+
+	if l.configFile != "" {
+		fileCfg, err := l.loadFile()
+		if err != nil {
+			return nil, err
+		}
+		mapConfigFileToConfigValues(setters, fileCfg, cfg)
 	}
 
 	setters.setValueForAll()
@@ -113,10 +141,55 @@ func (l *Loader) loadArgs() *args {
 	return loadArgs()
 }
 
+func (l *Loader) loadFile() (*configFile, error) {
+	reader, err := getFileReader(l.configFile)
+	if err != nil {
+		return nil, fmt.Errorf("config file loader: %v", err)
+	}
+
+	fileConfig := &configFile{}
+	err = l.configFileDecoder.Decode(reader, fileConfig)
+	if err != nil {
+		return nil, fmt.Errorf("config file loader: %v", err)
+	}
+	return fileConfig, nil
+}
+
+func openFile(path string) (*os.File, error) {
+	return os.Open(path)
+}
+
+func getFileReader(path string) (*bufio.Reader, error) {
+	f, err := openFile(path)
+	if err != nil {
+		return nil, err
+	}
+	return bufio.NewReader(f), nil
+}
+
 type LoaderOpt func(l *Loader)
 
 func LoadArgs() LoaderOpt {
 	return func(l *Loader) {
 		l.shouldLoadArgs = true
 	}
+}
+
+func LoadFile(path string, decoder configFileDecoder) LoaderOpt {
+	return func(l *Loader) {
+		l.configFile = path
+		l.configFileDecoder = decoder
+	}
+}
+
+type configFileDecoder interface {
+	Decode(data io.Reader, dst any) error
+}
+
+type configFileServer struct {
+	Port uint64
+}
+
+type configFile struct {
+	Server configFileServer
 }
