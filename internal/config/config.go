@@ -19,6 +19,7 @@ const (
 )
 
 type Config struct {
+	Source ConfigSource
 	Server ServerConfig
 }
 
@@ -27,6 +28,11 @@ func (cfg *Config) checkErrors() error {
 		return fmt.Errorf("invalid port value %d. Should be in-between 1024 and 65535", cfg.Server.Port.Value)
 	}
 	return nil
+}
+
+type ConfigSource struct {
+	ParseArgs bool
+	File      string
 }
 
 type ServerConfig struct {
@@ -115,6 +121,7 @@ func (l *Loader) Load() (*Config, error) {
 
 	if l.shouldLoadArgs {
 		loadedArgs := l.loadArgs()
+		cfg.Source.ParseArgs = true
 		mapArgsToConfigValues(setters, loadedArgs, cfg)
 
 		if l.configFile == "" {
@@ -127,6 +134,7 @@ func (l *Loader) Load() (*Config, error) {
 		if err != nil {
 			return nil, err
 		}
+		cfg.Source.File = l.configFile
 		mapConfigFileToConfigValues(setters, fileCfg, cfg)
 	}
 
