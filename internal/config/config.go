@@ -83,18 +83,29 @@ func loadArgs() *args {
 	return &a
 }
 
+type valueMapper struct {
+	setters configValueSetters
+	config  *Config
+}
+
+func newValueMapper(setters configValueSetters, config *Config) *valueMapper {
+	return &valueMapper{setters: setters, config: config}
+}
+
+func (m *valueMapper) mapArgsToConfigValues(a *args) {
+	src := ArgumentSource
+	mapToConfigValue[uint64](m.setters, "port", src, &a.port, &m.config.Server.Port)
+}
+
+func (m *valueMapper) mapConfigFileToConfigValues(cfgF *configFile) {
+	src := FileSource
+	mapToConfigValue[uint64](m.setters, "port", src, &cfgF.Server.Port, &m.config.Server.Port)
+}
+
 func mapToConfigValue[T any](mp configValueSetters, name string, src sourceType, from *T, to *configValue[T]) {
 	mp.addSetterFor(name, func() {
 		to.Set(*from, src)
 	})
-}
-
-func mapArgsToConfigValues(mp configValueSetters, a *args, cfg *Config) {
-	mapToConfigValue[uint64](mp, "port", ArgumentSource, &a.port, &cfg.Server.Port)
-}
-
-func mapConfigFileToConfigValues(mp configValueSetters, cfgF *configFile, cfg *Config) {
-	mapToConfigValue[uint64](mp, "port", FileSource, &cfgF.Server.Port, &cfg.Server.Port)
 }
 
 type Loader struct {
@@ -118,11 +129,12 @@ func NewLoader(opts ...LoaderOpt) *Loader {
 func (l *Loader) Load() (*Config, error) {
 	cfg := &Config{}
 	setters := configValueSetters{}
+	mapper := newValueMapper(setters, cfg)
 
 	if l.shouldLoadArgs {
 		loadedArgs := l.loadArgs()
 		cfg.Source.ParseArgs = true
-		mapArgsToConfigValues(setters, loadedArgs, cfg)
+		mapper.mapArgsToConfigValues(loadedArgs)
 
 		if l.configFile == "" {
 			l.configFile = loadedArgs.configFile
@@ -135,7 +147,7 @@ func (l *Loader) Load() (*Config, error) {
 			return nil, err
 		}
 		cfg.Source.File = l.configFile
-		mapConfigFileToConfigValues(setters, fileCfg, cfg)
+		mapper.mapConfigFileToConfigValues(fileCfg)
 	}
 
 	setters.setValueForAll()
