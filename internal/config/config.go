@@ -228,6 +228,9 @@ type secretString struct {
 }
 
 func (s secretString) String() string {
+	if s.value == "" {
+		return ""
+	}
 	return "***"
 }
 
