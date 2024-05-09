@@ -27,6 +27,12 @@ func main() {
 	lg := logger.New()
 	lg.Println("Set up logger.")
 
+	cfgPretty, err := cfg.Pretty()
+	if err != nil {
+		log.Fatalf("unable to print config: %w", err)
+	}
+	log.Printf("Config:\n%v", cfgPretty)
+
 	dsn := "postgres://jack:secret@pg.example.com:5432/mydb"
 	dbPool, err := db.CreatePool(context.Background(), dsn)
 	if err != nil {

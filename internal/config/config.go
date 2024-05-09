@@ -19,8 +19,8 @@ const (
 )
 
 type Config struct {
-	Source ConfigSource
-	Server ServerConfig
+	Source ConfigSource `yaml:"source"`
+	Server ServerConfig `yaml:"server"`
 }
 
 func (cfg *Config) checkErrors() error {
@@ -30,13 +30,22 @@ func (cfg *Config) checkErrors() error {
 	return nil
 }
 
+func (cfg *Config) Pretty() (string, error) {
+	enc := encdec.NewYAMLEncoder()
+	encoded, err := enc.Encode(cfg)
+	if err != nil {
+		return "", fmt.Errorf("config prettier: %w", err)
+	}
+	return string(encoded), nil
+}
+
 type ConfigSource struct {
-	ParseArgs bool
-	File      string
+	ParseArgs bool   `yaml:"parseArgs"`
+	File      string `yaml:"file"`
 }
 
 type ServerConfig struct {
-	Port configValue[uint64]
+	Port configValue[uint64] `yaml:"port"`
 }
 
 type configValue[T any] struct {
