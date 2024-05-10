@@ -21,11 +21,15 @@ const (
 type Config struct {
 	Source ConfigSource `yaml:"source"`
 	Server ServerConfig `yaml:"server"`
+	DB     DBConfig     `yaml:"db"`
 }
 
 func (cfg *Config) checkErrors() error {
 	if !validator.ValidateValueInRange[uint64](cfg.Server.Port.Value, 1024, 65535) {
 		return fmt.Errorf("invalid port value %d. Should be in-between 1024 and 65535", cfg.Server.Port.Value)
+	}
+	if !validator.ValidateValueInRange[uint64](cfg.DB.Port.Value, 1024, 65535) {
+		return fmt.Errorf("invalid DB port value %d. Should be in-between 1024 and 65535", cfg.DB.Port)
 	}
 	return nil
 }
@@ -46,6 +50,14 @@ type ConfigSource struct {
 
 type ServerConfig struct {
 	Port configValue[uint64] `yaml:"port"`
+}
+
+type DBConfig struct {
+	Host     configValue[string]       `yaml:"host"`
+	Port     configValue[uint64]       `yaml:"port"`
+	Name     configValue[string]       `yaml:"name"`
+	User     configValue[string]       `yaml:"user"`
+	Password configValue[secretString] `yaml:"password"`
 }
 
 type configValue[T any] struct {
@@ -109,6 +121,11 @@ func (m *valueMapper) mapArgsToConfigValues(a *args) {
 func (m *valueMapper) mapConfigFileToConfigValues(cfgF *configFile) {
 	src := FileSource
 	mapToConfigValue[uint64](m.setters, "port", src, &cfgF.Server.Port, &m.config.Server.Port)
+	mapToConfigValue[string](m.setters, "db_host", src, &cfgF.DB.Host, &m.config.DB.Host)
+	mapToConfigValue[uint64](m.setters, "db_port", src, &cfgF.DB.Port, &m.config.DB.Port)
+	mapToConfigValue[string](m.setters, "db_name", src, &cfgF.DB.Name, &m.config.DB.Name)
+	mapToConfigValue[string](m.setters, "db_user", src, &cfgF.DB.User, &m.config.DB.User)
+	mapToConfigValue[secretString](m.setters, "db_password", src, &cfgF.DB.Password, &m.config.DB.Password)
 }
 
 func mapToConfigValue[T any](mp configValueSetters, name string, src sourceType, from *T, to *configValue[T]) {
@@ -215,12 +232,21 @@ type configFileDecoder interface {
 	Decode(data io.Reader, dst any) error
 }
 
-type configFileServer struct {
-	Port uint64
-}
-
 type configFile struct {
 	Server configFileServer
+	DB     configFileDB
+}
+
+type configFileServer struct {
+	Port uint64 `yaml:"port"`
+}
+
+type configFileDB struct {
+	Host     string       `yaml:"host"`
+	Port     uint64       `yaml:"port"`
+	Name     string       `yaml:"name"`
+	User     string       `yaml:"user"`
+	Password secretString `yaml:"password"`
 }
 
 type secretString struct {

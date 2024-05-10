@@ -23,7 +23,6 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Printf("Got port %d.\n", cfg.Server.Port)
 	lg := logger.New()
 	lg.Println("Set up logger.")
 
@@ -33,7 +32,15 @@ func main() {
 	}
 	log.Printf("Config:\n%v", cfgPretty)
 
-	dsn := "postgres://jack:secret@pg.example.com:5432/mydb"
+	dsn := fmt.Sprintf(
+		"postgres://%s:%s@%s:%v/%s",
+		cfg.DB.User.Value,
+		cfg.DB.Password.Value.GetValue(),
+		cfg.DB.Host.Value,
+		cfg.DB.Port.Value,
+		cfg.DB.Name.Value,
+	)
+	lg.Println(dsn)
 	dbPool, err := db.CreatePool(context.Background(), dsn)
 	if err != nil {
 		lg.Fatal(err)
