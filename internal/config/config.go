@@ -246,6 +246,6 @@ func (s secretString) MarshalYAML() (any, error) {
 	return s.String(), nil
 }
 
-func (s secretString) UnmarshalYAML(unmarshal func(any) error) error {
+func (s *secretString) UnmarshalYAML(unmarshal func(any) error) error {
 	return unmarshal(&s.value)
 }
