@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/ledorub/snote-api/api/common"
 	"github.com/ledorub/snote-api/api/router"
 	"github.com/ledorub/snote-api/internal/config"
@@ -18,12 +19,12 @@ import (
 )
 
 func main() {
-	cfgLoader := config.NewLoader(config.LoadArgs())
-	cfg, err := cfgLoader.Load()
+	cfg, err := loadConfig()
 	if err != nil {
 		log.Fatal(err)
 	}
-	lg := logger.New()
+
+	lg := createLogger()
 	lg.Println("Set up logger.")
 
 	cfgPretty, err := cfg.Pretty()
@@ -32,34 +33,60 @@ func main() {
 	}
 	log.Printf("Config:\n%v", cfgPretty)
 
-	dsn := fmt.Sprintf(
-		"postgres://%s:%s@%s:%v/%s",
-		cfg.DB.User.Value,
-		cfg.DB.Password.Value.GetValue(),
-		cfg.DB.Host.Value,
-		cfg.DB.Port.Value,
-		cfg.DB.Name.Value,
-	)
-	lg.Println(dsn)
-	dbPool, err := db.CreatePool(context.Background(), dsn)
+	dbConn, err := createDBConnection(&cfg.DB)
 	if err != nil {
 		lg.Fatal(err)
 	}
-	noteRepo := db.NewNoteRepository(lg, db.New(dbPool))
-	noteService := service.New(lg, noteRepo)
+	noteRepo := createNoteRepo(lg, dbConn)
+	noteService := createNoteService(lg, noteRepo)
 
-	jsonRequestReader := request.NewJSONReader(lg, encdec.NewJSONDecoder())
-	jsonResponseWriter := response.NewJSONWriter(lg, encdec.NewJSONEncoder())
-	validatorFactory := func() common.Validator { return validator.New() }
-	noteAPI := router.New(lg, jsonRequestReader, jsonResponseWriter, validatorFactory, noteService)
-
-	maxBytes := 1_048_576
-	srv := &http.Server{
-		Addr:    fmt.Sprintf(":%d", cfg.Server.Port),
-		Handler: http.MaxBytesHandler(http.Handler(noteAPI), int64(maxBytes)),
-	}
+	api := createAPI(lg, noteService)
+	srv := createServer(lg, &cfg.Server, api)
 
 	lg.Printf("Starting the server at %s", srv.Addr)
 	err = srv.ListenAndServe()
 	lg.Fatal(err)
+}
+
+func loadConfig() (*config.Config, error) {
+	cfgLoader := config.NewLoader(config.LoadArgs())
+	return cfgLoader.Load()
+}
+
+func createLogger() *log.Logger {
+	return logger.New()
+}
+
+func createDBConnection(dbConfig *config.DBConfig) (*pgxpool.Pool, error) {
+	dsn := db.BuildDSN(
+		dbConfig.Host.Value,
+		dbConfig.Port.Value,
+		dbConfig.User.Value,
+		dbConfig.Password.Value.GetValue(),
+		dbConfig.Name.Value,
+	)
+	return db.CreatePool(context.Background(), dsn)
+}
+
+func createNoteRepo(logger *log.Logger, dbConn *pgxpool.Pool) *db.NoteRepository {
+	return db.NewNoteRepository(logger, db.New(dbConn))
+}
+
+func createNoteService(logger *log.Logger, repo *db.NoteRepository) *service.NoteService {
+	return service.New(logger, repo)
+}
+
+func createAPI(logger *log.Logger, service *service.NoteService) *http.ServeMux {
+	jsonRequestReader := request.NewJSONReader(logger, encdec.NewJSONDecoder())
+	jsonResponseWriter := response.NewJSONWriter(logger, encdec.NewJSONEncoder())
+	validatorFactory := func() common.Validator { return validator.New() }
+	return router.New(logger, jsonRequestReader, jsonResponseWriter, validatorFactory, service)
+}
+
+func createServer(logger *log.Logger, serverConfig *config.ServerConfig, api http.Handler) *http.Server {
+	maxBytes := 1_048_576
+	return &http.Server{
+		Addr:    fmt.Sprintf(":%d", serverConfig.Port),
+		Handler: http.MaxBytesHandler(api, int64(maxBytes)),
+	}
 }

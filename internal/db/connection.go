@@ -36,3 +36,7 @@ func CheckConnection(ctx context.Context, pool *pgxpool.Pool) error {
 	}
 	return nil
 }
+
+func BuildDSN(host string, port uint64, name, user, password string) string {
+	return fmt.Sprintf("postgres://%s:%d@%s:%s/%s", host, port, user, password, name)
+}
