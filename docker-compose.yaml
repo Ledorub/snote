@@ -11,7 +11,7 @@ services:
       - db_main
     ports:
       - "5050:8080"
-    command: [ "--port", "8080", "--secrets", "/run/secrets/db_main" ]
+    command: [ "--config-file", "/run/secrets/app/config.yaml" ]
   db:
     build:
       dockerfile: db.Dockerfile
@@ -55,6 +55,8 @@ volumes:
   postgres-db:
 
 secrets:
+  app_config:
+    file: secrets/app/config.yaml
   db_main:
     file: secrets/db/main.txt
   db_user:
