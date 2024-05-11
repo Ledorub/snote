@@ -18,7 +18,7 @@ type API struct {
 	noteService      common.NoteService
 }
 
-func New(
+func NewAPI(
 	logger *log.Logger,
 	requestReader common.RequestReader,
 	responseWriter common.ResponseWriter,

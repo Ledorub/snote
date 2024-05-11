@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/ledorub/snote-api/api/common"
+	"github.com/ledorub/snote-api/api/resource/note"
 	"github.com/ledorub/snote-api/api/router"
 	"github.com/ledorub/snote-api/internal/config"
 	"github.com/ledorub/snote-api/internal/db"
@@ -80,7 +81,8 @@ func createAPI(logger *log.Logger, service *service.NoteService) *http.ServeMux 
 	jsonRequestReader := request.NewJSONReader(logger, encdec.NewJSONDecoder())
 	jsonResponseWriter := response.NewJSONWriter(logger, encdec.NewJSONEncoder())
 	validatorFactory := func() common.Validator { return validator.New() }
-	return router.New(logger, jsonRequestReader, jsonResponseWriter, validatorFactory, service)
+	noteAPI := note.NewRouter(logger, jsonRequestReader, jsonResponseWriter, validatorFactory, service)
+	return router.New(logger, noteAPI)
 }
 
 func createServer(logger *log.Logger, serverConfig *config.ServerConfig, api http.Handler) *http.Server {
