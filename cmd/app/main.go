@@ -88,7 +88,7 @@ func createAPI(logger *log.Logger, service *service.NoteService) *http.ServeMux 
 func createServer(logger *log.Logger, serverConfig *config.ServerConfig, api http.Handler) *http.Server {
 	maxBytes := 1_048_576
 	return &http.Server{
-		Addr:    fmt.Sprintf(":%d", serverConfig.Port),
+		Addr:    fmt.Sprintf(":%d", serverConfig.Port.Value),
 		Handler: http.MaxBytesHandler(api, int64(maxBytes)),
 	}
 }
