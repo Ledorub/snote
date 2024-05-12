@@ -2,8 +2,8 @@ package note
 
 import (
 	"errors"
-	"github.com/ledorub/snote-api/api/common"
 	"github.com/ledorub/snote-api/internal"
+	"github.com/ledorub/snote-api/internal/api/common"
 	"github.com/ledorub/snote-api/internal/validator"
 	"log"
 	"net/http"

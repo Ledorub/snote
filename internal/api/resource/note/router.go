@@ -1,7 +1,7 @@
 package note
 
 import (
-	"github.com/ledorub/snote-api/api/common"
+	"github.com/ledorub/snote-api/internal/api/common"
 	"log"
 	"net/http"
 )
