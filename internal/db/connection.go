@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"net/url"
 	"time"
 )
 
@@ -37,6 +38,11 @@ func CheckConnection(ctx context.Context, pool *pgxpool.Pool) error {
 	return nil
 }
 
-func BuildDSN(host string, port uint64, name, user, password string) string {
-	return fmt.Sprintf("postgres://%s:%d@%s:%s/%s", host, port, user, password, name)
+func BuildDSN(host string, port uint64, user, password, name string) string {
+	return (&url.URL{
+		Scheme: "postgres",
+		Host:   fmt.Sprintf("%s:%d", host, port),
+		User:   url.UserPassword(user, password),
+		Path:   name,
+	}).String()
 }
