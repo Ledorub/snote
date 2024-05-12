@@ -8,10 +8,10 @@ services:
       db:
         condition: service_healthy
     secrets:
-      - db_main
+      - config
     ports:
       - "5050:8080"
-    command: [ "--config-file", "/run/secrets/app/config.yaml" ]
+    command: [ "--config-file", "/run/secrets/config" ]
   db:
     build:
       dockerfile: db.Dockerfile
@@ -55,7 +55,7 @@ volumes:
   postgres-db:
 
 secrets:
-  app_config:
+  config:
     file: secrets/app/config.yaml
   db_main:
     file: secrets/db/main.txt
