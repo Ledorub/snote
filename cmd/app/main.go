@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/ledorub/snote-api/internal/api/common"
@@ -17,6 +18,9 @@ import (
 	"github.com/ledorub/snote-api/internal/validator"
 	"log"
 	"net/http"
+	"os/signal"
+	"syscall"
+	"time"
 )
 
 func main() {
@@ -34,7 +38,10 @@ func main() {
 	}
 	log.Printf("Config:\n%v", cfgPretty)
 
-	dbConn, err := createDBConnection(&cfg.DB)
+	ctx, stop := createMainContext()
+	defer stop()
+
+	dbConn, err := createDBConnection(ctx, &cfg.DB)
 	if err != nil {
 		lg.Fatal(err)
 	}
@@ -42,11 +49,9 @@ func main() {
 	noteService := createNoteService(lg, noteRepo)
 
 	api := createAPI(lg, noteService)
-	srv := createServer(lg, &cfg.Server, api)
-
-	lg.Printf("Starting the server at %s", srv.Addr)
-	err = srv.ListenAndServe()
-	lg.Fatal(err)
+	if err = startServer(lg, ctx, &cfg.Server, api); err != nil {
+		lg.Fatal(err)
+	}
 }
 
 func loadConfig() (*config.Config, error) {
@@ -58,7 +63,11 @@ func createLogger() *log.Logger {
 	return logger.New()
 }
 
-func createDBConnection(dbConfig *config.DBConfig) (*pgxpool.Pool, error) {
+func createMainContext() (context.Context, context.CancelFunc) {
+	return signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+}
+
+func createDBConnection(ctx context.Context, dbConfig *config.DBConfig) (*pgxpool.Pool, error) {
 	dsn := db.BuildDSN(
 		dbConfig.Host.Value,
 		dbConfig.Port.Value,
@@ -66,7 +75,7 @@ func createDBConnection(dbConfig *config.DBConfig) (*pgxpool.Pool, error) {
 		dbConfig.Password.Value.GetValue(),
 		dbConfig.Name.Value,
 	)
-	return db.CreatePool(context.Background(), dsn)
+	return db.CreatePool(ctx, dsn)
 }
 
 func createNoteRepo(logger *log.Logger, dbConn *pgxpool.Pool) *db.NoteRepository {
@@ -85,10 +94,44 @@ func createAPI(logger *log.Logger, service *service.NoteService) *http.ServeMux 
 	return router.New(logger, noteAPI)
 }
 
-func createServer(logger *log.Logger, serverConfig *config.ServerConfig, api http.Handler) *http.Server {
+func createServer(
+	logger *log.Logger,
+	serverConfig *config.ServerConfig,
+	api http.Handler,
+) *http.Server {
 	maxBytes := 1_048_576
 	return &http.Server{
 		Addr:    fmt.Sprintf(":%d", serverConfig.Port.Value),
 		Handler: http.MaxBytesHandler(api, int64(maxBytes)),
 	}
+}
+
+func startServer(
+	logger *log.Logger,
+	ctx context.Context,
+	serverConfig *config.ServerConfig,
+	api http.Handler,
+) error {
+	srv := createServer(logger, serverConfig, api)
+	srvError := make(chan error, 1)
+	go func() {
+		logger.Printf("server: starting on %s", srv.Addr)
+		srvError <- srv.ListenAndServe()
+	}()
+
+	select {
+	case <-ctx.Done():
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		logger.Printf("server: shutting down")
+		if err := srv.Shutdown(ctx); err != nil {
+			logger.Fatalf("server: %w", err)
+		}
+	case err := <-srvError:
+		if !errors.Is(err, http.ErrServerClosed) {
+			return err
+		}
+	}
+	logger.Println("server: shut down")
+	return nil
 }
