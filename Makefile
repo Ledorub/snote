@@ -11,8 +11,12 @@ migrate-down:
 
 .PHONY: build
 build:
-	docker compose build
+	docker compose --profile "*" build
 
-.PHONY: run
-run:
-	docker compose --profile app up
+.PHONY: start
+start:
+	docker compose --profile app up -d
+
+.PHONY: stop
+stop:
+	docker compose --profile app stop
