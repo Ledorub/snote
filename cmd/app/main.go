@@ -50,8 +50,9 @@ func main() {
 
 	api := createAPI(lg, noteService)
 	if err = startServer(lg, ctx, &cfg.Server, api); err != nil {
-		lg.Fatal(err)
+		lg.Printf("server: %w", err)
 	}
+	closeDBConnection(lg, dbConn)
 }
 
 func loadConfig() (*config.Config, error) {
@@ -76,6 +77,12 @@ func createDBConnection(ctx context.Context, dbConfig *config.DBConfig) (*pgxpoo
 		dbConfig.Name.Value,
 	)
 	return db.CreatePool(ctx, dsn)
+}
+
+func closeDBConnection(logger *log.Logger, conn *pgxpool.Pool) {
+	logger.Println("DB: closing connection...")
+	conn.Close()
+	logger.Println("DB: connection closed")
 }
 
 func createNoteRepo(logger *log.Logger, dbConn *pgxpool.Pool) *db.NoteRepository {
@@ -123,9 +130,9 @@ func startServer(
 	case <-ctx.Done():
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
-		logger.Printf("server: shutting down")
+		logger.Printf("server: shutting down...")
 		if err := srv.Shutdown(ctx); err != nil {
-			logger.Fatalf("server: %w", err)
+			return err
 		}
 	case err := <-srvError:
 		if !errors.Is(err, http.ErrServerClosed) {
