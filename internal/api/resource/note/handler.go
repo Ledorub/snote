@@ -57,7 +57,7 @@ func (api *API) Create(w http.ResponseWriter, r *http.Request) {
 	isExpiresAtSet := !noteData.ExpiresAt.IsZero() && noteData.ExpiresAtTimezone != ""
 	expirationDateConflict := isExpiresInSet && isExpiresAtSet
 	v.Check(
-		expirationDateConflict || !(isExpiresInSet || isExpiresAtSet),
+		!expirationDateConflict && (isExpiresInSet || isExpiresAtSet),
 		"either expiresIn or both expiresAt and expiresAtTimezone should be provided",
 	)
 	if !v.CheckIsValid() {

@@ -34,7 +34,7 @@ func (n *Note) CheckErrors() error {
 	isExpiresInSet := n.ExpiresIn != 0
 	isExpiresAtSet := !n.ExpiresAt.IsZero() && n.ExpiresAtTimeZone != nil
 	hasConflict := isExpiresInSet && isExpiresAtSet || !(isExpiresInSet || isExpiresAtSet)
-	v.Check(hasConflict, "either expiration date and time zone or expiration timeout should be provided")
+	v.Check(!hasConflict, "either expiration date and time zone or expiration timeout should be provided")
 	if n.ExpiresIn != 0 {
 		year := 24 * 60 * 365 * time.Minute
 		v.Check(
