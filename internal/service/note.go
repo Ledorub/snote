@@ -10,7 +10,9 @@ import (
 	"github.com/ledorub/snote-api/internal/validator"
 	"github.com/mr-tron/base58"
 	"log"
+	"strings"
 	"time"
+	"unicode/utf8"
 )
 
 var ErrDoesNotExist = errors.New("does not exist")
@@ -106,7 +108,7 @@ func (s *NoteService) GetNote(ctx context.Context, id string, keyHash string) (*
 		gotError = true
 	}
 
-	isAuthorized := compareKeyHashes(decodedKeyHash, []byte(noteDB.KeyHash))
+	isAuthorized := compareKeyHashes(decodedKeyHash, noteDB.KeyHash)
 
 	tz, err := stringToTimeZone(noteDB.ExpiresAtTimeZone)
 	if err != nil {
@@ -147,7 +149,15 @@ type B58IDEncDec struct{}
 func (ed *B58IDEncDec) Encode(id uint64) string {
 	bin := make([]byte, 8)
 	binary.BigEndian.PutUint64(bin, id)
-	return base58.Encode(bin)
+	enc := base58.Encode(bin)
+	return ed.padEncodedID(enc)
+}
+
+func (ed *B58IDEncDec) padEncodedID(id string) string {
+	if width := 10 - len(id); width > 0 {
+		return padStringWith(id, "1", 10)
+	}
+	return id
 }
 
 func (ed *B58IDEncDec) Decode(str string) (uint64, error) {
@@ -161,4 +171,15 @@ func (ed *B58IDEncDec) Decode(str string) (uint64, error) {
 
 func compareKeyHashes(x, y []byte) bool {
 	return subtle.ConstantTimeCompare(x, y) == 1
+}
+
+func padStringWith(s, padding string, totalWidth int) string {
+	stringWidth := utf8.RuneCountInString(s)
+	paddingWidth := utf8.RuneCountInString(padding)
+	fillWidth := totalWidth - stringWidth
+	if fillWidth > 0 {
+		fill := strings.Repeat(padding, fillWidth/paddingWidth) + padding[:fillWidth%paddingWidth]
+		s = fill + s
+	}
+	return s
 }
