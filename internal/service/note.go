@@ -32,8 +32,8 @@ type NoteService struct {
 	idEncDec idEncDec
 }
 
-func New(logger *log.Logger, repo noteRepository) *NoteService {
-	return &NoteService{logger: logger, repo: repo}
+func New(logger *log.Logger, repo noteRepository, idEncoderDecoder idEncDec) *NoteService {
+	return &NoteService{logger: logger, repo: repo, idEncDec: idEncoderDecoder}
 }
 
 func (s *NoteService) CreateNote(ctx context.Context, note *internal.Note) (*internal.Note, error) {

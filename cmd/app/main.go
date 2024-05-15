@@ -90,7 +90,7 @@ func createNoteRepo(logger *log.Logger, dbConn *pgxpool.Pool) *db.NoteRepository
 }
 
 func createNoteService(logger *log.Logger, repo *db.NoteRepository) *service.NoteService {
-	return service.New(logger, repo)
+	return service.New(logger, repo, &service.B58IDEncDec{})
 }
 
 func createAPI(logger *log.Logger, service *service.NoteService) *http.ServeMux {
