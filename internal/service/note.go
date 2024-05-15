@@ -42,12 +42,18 @@ func (s *NoteService) CreateNote(ctx context.Context, note *internal.Note) (*int
 	}
 
 	expiresAt, tz := calcExpirationDate(note.ExpiresAt, note.ExpiresAtTimeZone, note.ExpiresIn)
+
+	decodedKeyHash, err := base58.Decode(note.KeyHash)
+	if err != nil {
+		return &internal.Note{}, fmt.Errorf("note creation failed: %w", err)
+	}
+
 	newNote := &internal.NoteModel{
 		Content:           note.Content,
 		CreatedAt:         note.CreatedAt,
 		ExpiresAt:         expiresAt,
 		ExpiresAtTimeZone: tz.String(),
-		KeyHash:           []byte(note.KeyHash),
+		KeyHash:           decodedKeyHash,
 	}
 	createdNote, err := s.repo.Create(ctx, newNote)
 	if err != nil {
@@ -66,7 +72,6 @@ func (s *NoteService) CreateNote(ctx context.Context, note *internal.Note) (*int
 	note.ExpiresIn = 0
 	note.ExpiresAt = createdNote.ExpiresAt
 	note.ExpiresAtTimeZone = tz
-	note.KeyHash = string(createdNote.KeyHash)
 	return note, nil
 }
 
