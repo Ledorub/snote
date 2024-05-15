@@ -36,4 +36,5 @@ type ValidatorFactory = func() Validator
 
 type NoteService interface {
 	CreateNote(ctx context.Context, note *internal.Note) (*internal.Note, error)
+	GetNote(ctx context.Context, id string, keyHash string) (*internal.Note, error)
 }

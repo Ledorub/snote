@@ -4,6 +4,7 @@ import (
 	"errors"
 	"github.com/ledorub/snote-api/internal"
 	"github.com/ledorub/snote-api/internal/api/common"
+	"github.com/ledorub/snote-api/internal/service"
 	"github.com/ledorub/snote-api/internal/validator"
 	"log"
 	"net/http"
@@ -108,11 +109,42 @@ func (api *API) Create(w http.ResponseWriter, r *http.Request) {
 }
 
 func (api *API) Read(w http.ResponseWriter, r *http.Request) {
-	note := map[string]any{
-		"id":      1,
-		"content": "encrypted content",
+	noteID := r.PathValue("noteID")
+	keyHash := r.URL.Query().Get("key_hash")
+
+	v := api.validatorFactory()
+	v.Check(noteID != "", "note ID must not be empty")
+	v.Check(keyHash != "", "key hash must not be empty")
+	if !v.CheckIsValid() {
+		var validationErrors []error
+		for _, err := range v.GetErrors() {
+			validationErrors = append(validationErrors, err)
+		}
+		api.responseWriter.WriteValidationError(w, r, validationErrors)
+		return
 	}
-	api.responseWriter.Write(w, r, http.StatusOK, note)
+
+	note, err := api.noteService.GetNote(r.Context(), noteID, keyHash)
+	if err != nil {
+		if errors.Is(err, service.ErrDoesNotExist) {
+			api.responseWriter.WriteNotFound(w, r)
+		} else {
+			api.responseWriter.WriteServerError(w, r, err)
+		}
+		return
+	}
+	noteResponse := &struct {
+		ID                string    `json:"id"`
+		ExpiresAt         time.Time `json:"expiresAt"`
+		ExpiresAtTimeZone string    `json:"expiresAtTimeZone"`
+		KeyHash           string    `json:"keyHash"`
+	}{
+		ID:                note.ID,
+		ExpiresAt:         note.ExpiresAt,
+		ExpiresAtTimeZone: note.ExpiresAtTimeZone.String(),
+		KeyHash:           string(note.KeyHash),
+	}
+	api.responseWriter.Write(w, r, http.StatusOK, noteResponse)
 }
 
 func (api *API) Delete(w http.ResponseWriter, r *http.Request) {

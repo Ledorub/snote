@@ -37,6 +37,25 @@ func (r *NoteRepository) Create(ctx context.Context, note *internal.NoteModel) (
 	return note, nil
 }
 
+func (r *NoteRepository) Get(ctx context.Context, id uint64) (*internal.NoteModel, error) {
+	pgId, err := uInt64ToPgInt8(id)
+	if err != nil {
+		return nil, err
+	}
+	note, err := r.queries.GetNote(ctx, pgId)
+	if err != nil {
+		return nil, fmt.Errorf("retrieving failed: %w", err)
+	}
+	return &internal.NoteModel{
+		ID:                pgIntToUInt64(note.ID),
+		Content:           &note.Content,
+		CreatedAt:         note.CreatedAt.Time,
+		ExpiresAt:         note.ExpiresAt.Time,
+		ExpiresAtTimeZone: note.ExpiresAtTimezone,
+		KeyHash:           note.KeyHash,
+	}, nil
+}
+
 func (r *NoteRepository) Delete(ctx context.Context, id uint64) error {
 	pgInt, err := uInt64ToPgInt8(id)
 	if err != nil {

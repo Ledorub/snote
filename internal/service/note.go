@@ -2,16 +2,22 @@ package service
 
 import (
 	"context"
+	"crypto/subtle"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"github.com/ledorub/snote-api/internal"
+	"github.com/ledorub/snote-api/internal/validator"
 	"github.com/mr-tron/base58"
 	"log"
 	"time"
 )
 
+var ErrDoesNotExist = errors.New("does not exist")
+
 type noteRepository interface {
 	Create(ctx context.Context, note *internal.NoteModel) (*internal.NoteModel, error)
+	Get(ctx context.Context, id uint64) (*internal.NoteModel, error)
 	Delete(ctx context.Context, id uint64) error
 }
 
@@ -64,6 +70,57 @@ func (s *NoteService) CreateNote(ctx context.Context, note *internal.Note) (*int
 	return note, nil
 }
 
+func (s *NoteService) GetNote(ctx context.Context, id string, keyHash string) (*internal.Note, error) {
+	v := validator.New()
+	v.Check(len(id) == 10, "id should consist of 10 letters and/or digits")
+	v.Check(validator.ValidateB58String(id), "id should consist of latin letters and/or digits")
+	v.Check(len(keyHash) == 44, "key hash should consist of 44 letters and/or digits")
+	v.Check(validator.ValidateB58String(keyHash), "key hash should consist of latin letters and/or digits")
+	if !v.CheckIsValid() {
+		var validationErrors []error
+		for _, err := range v.GetErrors() {
+			validationErrors = append(validationErrors, err)
+		}
+		err := errors.Join(validationErrors...)
+		return &internal.Note{}, err
+	}
+
+	gotError := false
+	decodedID, err := s.idEncDec.Decode(id)
+	if err != nil {
+		gotError = true
+	}
+
+	decodedKeyHash, err := base58.Decode(keyHash)
+	if err != nil {
+		gotError = true
+	}
+
+	noteDB, err := s.repo.Get(ctx, decodedID)
+	if err != nil {
+		gotError = true
+	}
+
+	isAuthorized := compareKeyHashes(decodedKeyHash, noteDB.KeyHash)
+
+	tz, err := stringToTimeZone(noteDB.ExpiresAtTimeZone)
+	if err != nil {
+		return &internal.Note{}, errors.New("note has invalid time zone")
+	}
+
+	if !isAuthorized || gotError {
+		return &internal.Note{}, ErrDoesNotExist
+	}
+	return &internal.Note{
+		ID:                id,
+		Content:           noteDB.Content,
+		CreatedAt:         noteDB.CreatedAt,
+		ExpiresAt:         noteDB.ExpiresAt,
+		ExpiresAtTimeZone: tz,
+		KeyHash:           []byte(keyHash),
+	}, nil
+}
+
 func calcExpirationDate(expiresAt time.Time, tz *time.Location, expiresIn time.Duration) (time.Time, *time.Location) {
 	if expiresIn != 0 {
 		exp := time.Now().UTC().Add(expiresIn)
@@ -95,4 +152,8 @@ func (ed *B58IDEncDec) Decode(str string) (uint64, error) {
 	}
 	num := binary.BigEndian.Uint64(decoded)
 	return num, nil
+}
+
+func compareKeyHashes(x, y []byte) bool {
+	return subtle.ConstantTimeCompare(x, y) == 1
 }
