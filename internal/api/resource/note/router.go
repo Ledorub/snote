@@ -16,7 +16,7 @@ func NewRouter(
 	noteAPI := NewAPI(logger, requestReader, responseWriter, validatorFactory, noteService)
 
 	mux := http.NewServeMux()
-	mux.HandleFunc("POST /{noteID}", noteAPI.Create)
+	mux.HandleFunc("POST /", noteAPI.Create)
 	mux.HandleFunc("GET /{noteID}", noteAPI.Read)
 	mux.HandleFunc("DELETE /{noteID}", noteAPI.Delete)
 	return mux
