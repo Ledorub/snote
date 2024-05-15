@@ -47,7 +47,7 @@ func (s *NoteService) CreateNote(ctx context.Context, note *internal.Note) (*int
 		CreatedAt:         note.CreatedAt,
 		ExpiresAt:         expiresAt,
 		ExpiresAtTimeZone: tz.String(),
-		KeyHash:           note.KeyHash,
+		KeyHash:           []byte(note.KeyHash),
 	}
 	createdNote, err := s.repo.Create(ctx, newNote)
 	if err != nil {
@@ -66,7 +66,7 @@ func (s *NoteService) CreateNote(ctx context.Context, note *internal.Note) (*int
 	note.ExpiresIn = 0
 	note.ExpiresAt = createdNote.ExpiresAt
 	note.ExpiresAtTimeZone = tz
-	note.KeyHash = createdNote.KeyHash
+	note.KeyHash = string(createdNote.KeyHash)
 	return note, nil
 }
 
@@ -101,7 +101,7 @@ func (s *NoteService) GetNote(ctx context.Context, id string, keyHash string) (*
 		gotError = true
 	}
 
-	isAuthorized := compareKeyHashes(decodedKeyHash, noteDB.KeyHash)
+	isAuthorized := compareKeyHashes(decodedKeyHash, []byte(noteDB.KeyHash))
 
 	tz, err := stringToTimeZone(noteDB.ExpiresAtTimeZone)
 	if err != nil {
@@ -117,7 +117,7 @@ func (s *NoteService) GetNote(ctx context.Context, id string, keyHash string) (*
 		CreatedAt:         noteDB.CreatedAt,
 		ExpiresAt:         noteDB.ExpiresAt,
 		ExpiresAtTimeZone: tz,
-		KeyHash:           []byte(keyHash),
+		KeyHash:           keyHash,
 	}, nil
 }
 

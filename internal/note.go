@@ -15,7 +15,7 @@ type Note struct {
 	ExpiresIn         time.Duration
 	ExpiresAt         time.Time
 	ExpiresAtTimeZone *time.Location
-	KeyHash           []byte
+	KeyHash           string
 }
 
 func (n *Note) CheckErrors() error {
@@ -29,7 +29,7 @@ func (n *Note) CheckErrors() error {
 		validator.ValidateTimeInRange(n.CreatedAt, time.Now().Add(-1*time.Minute), time.Now()),
 		"time of the creation should be in range (now - 1 min, now]",
 	)
-	v.Check(len(n.KeyHash) == 64, "key hash must be exactly 64 bytes long")
+	v.Check(len(n.KeyHash) == 44, "key hash must be exactly 44 bytes long")
 
 	isExpiresInSet := n.ExpiresIn != 0
 	isExpiresAtSet := !n.ExpiresAt.IsZero() && n.ExpiresAtTimeZone != nil
@@ -71,7 +71,7 @@ func NewNote(
 	expiresIn time.Duration,
 	expiresAt time.Time,
 	expiresAtTimeZone string,
-	keyHash []byte,
+	keyHash string,
 ) (*Note, error) {
 	tz, err := time.LoadLocation(expiresAtTimeZone)
 	if err != nil && expiresIn == 0 {

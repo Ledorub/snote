@@ -41,7 +41,7 @@ func (api *API) Create(w http.ResponseWriter, r *http.Request) {
 		ExpiresAt         time.Time     `json:"expiresAt"`
 		ExpiresAtTimezone string        `json:"expiresAtTimezone"`
 		ExpiresIn         time.Duration `json:"expiresIn"`
-		KeyHash           []byte        `json:"keyHash"`
+		KeyHash           string        `json:"keyHash"`
 	}
 	noteData := noteCreate{}
 	if err := api.requestReader.Read(r.Body, &noteData); err != nil {
@@ -96,7 +96,7 @@ func (api *API) Create(w http.ResponseWriter, r *http.Request) {
 		ID                string    `json:"id"`
 		ExpiresAt         time.Time `json:"expiresAt"`
 		ExpiresAtTimeZone string    `json:"expiresAtTimeZone"`
-		KeyHash           []byte    `json:"keyHash"`
+		KeyHash           string    `json:"keyHash"`
 	}
 	noteResponse := noteCreateResponse{
 		ID:                note.ID,
@@ -142,7 +142,7 @@ func (api *API) Read(w http.ResponseWriter, r *http.Request) {
 		ID:                note.ID,
 		ExpiresAt:         note.ExpiresAt,
 		ExpiresAtTimeZone: note.ExpiresAtTimeZone.String(),
-		KeyHash:           string(note.KeyHash),
+		KeyHash:           note.KeyHash,
 	}
 	api.responseWriter.Write(w, r, http.StatusOK, noteResponse)
 }
