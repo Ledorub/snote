@@ -46,7 +46,7 @@ func ValidateValueInRange[T cmp.Ordered](v, low, high T) bool {
 func ValidateB58String(s string) bool {
 	for _, char := range s {
 		validUpperLetter := char != 'O' && char != 'I' && char >= 'A' && char <= 'Z'
-		validLowerLetter := char != 'l' && char >= 'A' && char <= 'Z'
+		validLowerLetter := char != 'l' && char >= 'a' && char <= 'z'
 		validDigit := char >= '1' && char <= '9'
 		if !(validUpperLetter || validLowerLetter || validDigit) {
 			return false
