@@ -108,9 +108,17 @@ func (s *NoteService) GetNote(ctx context.Context, id string, keyHash string) (*
 		gotError = true
 	}
 
-	isAuthorized := compareKeyHashes(decodedKeyHash, noteDB.KeyHash)
+	var noteKeyHash []byte
+	var noteTimeZone string
+	if noteDB != nil {
+		noteKeyHash = noteDB.KeyHash
+		noteTimeZone = noteDB.ExpiresAtTimeZone
+	} else {
+		noteKeyHash = decodedKeyHash
+	}
+	isAuthorized := compareKeyHashes(decodedKeyHash, noteKeyHash)
 
-	tz, err := stringToTimeZone(noteDB.ExpiresAtTimeZone)
+	tz, err := stringToTimeZone(noteTimeZone)
 	if err != nil {
 		return &internal.Note{}, errors.New("note has invalid time zone")
 	}
