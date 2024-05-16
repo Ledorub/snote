@@ -123,6 +123,11 @@ func (s *NoteService) GetNote(ctx context.Context, id string, keyHash string) (*
 		return &internal.Note{}, errors.New("note has invalid time zone")
 	}
 
+	err = s.repo.Delete(ctx, decodedID)
+	if err != nil {
+		gotError = true
+	}
+
 	if !isAuthorized || gotError {
 		return &internal.Note{}, ErrDoesNotExist
 	}
