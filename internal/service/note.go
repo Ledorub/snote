@@ -173,6 +173,7 @@ func (ed *B58IDEncDec) Decode(str string) (uint64, error) {
 	if err != nil {
 		return 0, fmt.Errorf("id decoding error: %w", err)
 	}
+	decoded = decoded[len(decoded)-8:]
 	num := binary.BigEndian.Uint64(decoded)
 	return num, nil
 }
