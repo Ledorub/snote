@@ -79,10 +79,10 @@ func (s *NoteService) CreateNote(ctx context.Context, note *internal.Note) (*int
 
 func (s *NoteService) GetNote(ctx context.Context, id string, keyHash string) (*internal.Note, error) {
 	v := validator.New()
-	v.Check(len(id) == 10, "id should consist of 10 letters and/or digits")
-	v.Check(validator.ValidateB58String(id), "id should consist of latin letters and/or digits")
+	v.Check(len(id) == 12, "id should consist of 12 letters and/or digits and hyphens.")
+	v.Check(validator.ValidateHyphenatedB58String(id), "id should consist of latin letters and/or digits and hyphens")
 	v.Check(len(keyHash) == 44, "key hash should consist of 44 letters and/or digits")
-	v.Check(validator.ValidateB58String(keyHash), "key hash should consist of latin letters and/or digits")
+	v.Check(validator.ValidateHyphenatedB58String(keyHash), "key hash should consist of latin letters and/or digits")
 	if !v.CheckIsValid() {
 		var validationErrors []error
 		for _, err := range v.GetErrors() {
@@ -163,7 +163,8 @@ func (ed *B58IDEncDec) Encode(id uint64) string {
 	bin := make([]byte, 8)
 	binary.BigEndian.PutUint64(bin, id)
 	enc := base58.Encode(bin)
-	return ed.padEncodedID(enc)
+	enc = ed.padEncodedID(enc)
+	return insertStringSeparator(enc, "-", 4)
 }
 
 func (ed *B58IDEncDec) padEncodedID(id string) string {
@@ -174,12 +175,16 @@ func (ed *B58IDEncDec) padEncodedID(id string) string {
 }
 
 func (ed *B58IDEncDec) Decode(str string) (uint64, error) {
-	decoded, err := base58.Decode(str)
+	str, err := removeStringSeparator(str, "-", 4)
+	if err != nil {
+		return 0, err
+	}
+	dec, err := base58.Decode(str)
 	if err != nil {
 		return 0, fmt.Errorf("id decoding error: %w", err)
 	}
-	decoded = decoded[len(decoded)-8:]
-	num := binary.BigEndian.Uint64(decoded)
+	dec = dec[len(dec)-8:]
+	num := binary.BigEndian.Uint64(dec)
 	return num, nil
 }
 
@@ -196,4 +201,58 @@ func padStringWith(s, padding string, totalWidth int) string {
 		s = fill + s
 	}
 	return s
+}
+
+func insertStringSeparator(s, sep string, segmentWidth int) string {
+	approxSepCount := len(s) / segmentWidth
+	if len(s)%segmentWidth == 0 {
+		approxSepCount--
+	}
+	newWidth := len(s) + approxSepCount*len(sep)
+	strBytes := make([]byte, newWidth)
+
+	writeI := 0
+	for byteI, charI := 0, 0; byteI < len(s)-1; byteI++ {
+		strBytes[writeI] = s[byteI]
+		writeI++
+
+		if utf8.RuneStart(s[byteI+1]) {
+			charI++
+		}
+		if charI == segmentWidth {
+			for i := 0; i < len(sep); i++ {
+				strBytes[writeI] = sep[i]
+				writeI++
+			}
+			charI = 0
+		}
+	}
+	strBytes[writeI] = s[len(s)-1]
+	return string(strBytes[:writeI+1])
+}
+
+func removeStringSeparator(s, sep string, segmentWidth int) (string, error) {
+	strBytes := make([]byte, len(s))
+
+	writeI := 0
+	for byteI, charI := 0, 0; byteI < len(s); byteI++ {
+		if byteI == len(s)-1 || utf8.RuneStart(s[byteI+1]) {
+			charI++
+		}
+
+		strBytes[writeI] = s[byteI]
+		writeI++
+
+		if charI == segmentWidth && byteI != len(s)-1 {
+			charI = 0
+			substr := s[byteI+1 : byteI+1+len(sep)]
+			if substr != sep {
+				return "", fmt.Errorf(
+					"removeStringSeparator: expected %s at s[%d], but got %s", sep, byteI+1, substr,
+				)
+			}
+			byteI += len(sep)
+		}
+	}
+	return string(strBytes[:writeI]), nil
 }

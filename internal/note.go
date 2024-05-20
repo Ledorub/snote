@@ -21,7 +21,7 @@ type Note struct {
 func (n *Note) CheckErrors() error {
 	v := validator.Validator{}
 
-	v.Check(validator.ValidateB58String(n.ID), "id should consist of latin letters and/or digits")
+	v.Check(validator.ValidateHyphenatedB58String(n.ID), "id should consist of latin letters and/or digits and hyphens")
 	v.Check(len(*n.Content) != 0, "content should be provided")
 	v.Check(len(*n.Content) <= 1_048_576, "content should not exceed 1 MB")
 	v.Check(

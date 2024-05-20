@@ -42,13 +42,14 @@ func ValidateValueInRange[T cmp.Ordered](v, low, high T) bool {
 	return v >= low && v <= high
 }
 
-// ValidateB58String checks that s is a valid base58 string.
-func ValidateB58String(s string) bool {
+// ValidateHyphenatedB58String checks that s is a string consisting of base58 chars and/or hyphens.
+func ValidateHyphenatedB58String(s string) bool {
 	for _, char := range s {
 		validUpperLetter := char != 'O' && char != 'I' && char >= 'A' && char <= 'Z'
 		validLowerLetter := char != 'l' && char >= 'a' && char <= 'z'
 		validDigit := char >= '1' && char <= '9'
-		if !(validUpperLetter || validLowerLetter || validDigit) {
+		hyphen := char == '-'
+		if !(validUpperLetter || validLowerLetter || validDigit || hyphen) {
 			return false
 		}
 	}
