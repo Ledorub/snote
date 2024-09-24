@@ -1,15 +1,15 @@
 module github.com/ledorub/snote-api
 
-go 1.22.2
+go 1.23.1
 
 require (
+	github.com/goccy/go-yaml v1.11.3
 	github.com/jackc/pgx/v5 v5.5.5
 	github.com/mr-tron/base58 v1.2.0
 )
 
 require (
 	github.com/fatih/color v1.16.0 // indirect
-	github.com/goccy/go-yaml v1.11.3 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20221227161230-091c0ba34f0a // indirect
 	github.com/jackc/puddle/v2 v2.2.1 // indirect
