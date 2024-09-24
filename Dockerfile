@@ -9,14 +9,13 @@ COPY . .
 
 RUN CGO_ENABLED=0 GOOS=linux go build -o /usr/local/bin/snote ./cmd/app
 
-FROM build-stage AS release-stage
+FROM scratch
 
-RUN useradd app
 WORKDIR /usr/local/bin
 
+COPY --from=build-stage /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 COPY --from=build-stage /usr/local/bin/snote ./snote
 
-USER app:app
 EXPOSE 8080
 
 ENTRYPOINT ["./snote"]
